@@ -75,8 +75,35 @@ module.exports = NodeHelper.create({
 	 */
 	parsePriceData(data, hourOffset, priceOffset, priceMultiplier) {
 	    if (this.config.dataSource === "Oslo") {
-        // Parsing logic for Oslo data
-        // ... (as provided in the previous response)
+    let ret = [];
+    
+    // Loop through each row in the data
+    for (let row of data.data.Rows) {
+        // Find the column for Oslo
+        let osloColumn = row.Columns.find(column => column.Name === "Oslo");
+        
+        if (osloColumn) {
+            // Extract the value and convert it to a number
+            let price = parseFloat(osloColumn.Value.replace(',', '.')); // Convert comma to dot for decimal
+            price = price * priceMultiplier + priceOffset;
+            
+            // Extract the start time for the interval
+            let startTime = new Date(row.StartTime);
+            
+            // Adjust for the hour offset if provided
+            if (hourOffset) {
+                startTime.setHours(startTime.getHours() + hourOffset);
+            }
+            
+            ret.push({
+                time: startTime,
+                price: price
+            });
+        }
+    }
+    
+    return ret;
+
     } else {
 		if(!data) {
 			return false;
