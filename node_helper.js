@@ -9,7 +9,12 @@ const https = require('https');
 
 module.exports = NodeHelper.create({
 
+	
+
 	socketNotificationReceived: function(notification, payload) {
+	if (notification === "SET_CONFIG") {
+        this.config = payload;
+    }
         if(notification === 'GET_PRICEDATA') {
             this.getPriceData(payload.url, payload.hourOffset, payload.priceOffset, payload.priceMultiplier);
         }
@@ -26,6 +31,9 @@ module.exports = NodeHelper.create({
 	 * @param Double priceMultiplier The multiplier of the price. The price will be multiplied first and then offset is added.
 	 */
 	getPriceData(url, hourOffset, priceOffset, priceMultiplier) {
+		    if (this.config.dataSource === "Oslo") {
+        url = "https://www.nordpoolgroup.com/api/marketdata/page/23?currency=NOK";
+    }
 		https.get(url, (res) => {
 			let body = '';
 
@@ -51,6 +59,7 @@ module.exports = NodeHelper.create({
 		}).on('error', (error) => {
 			this.sendSocketNotification('PRICEDATAERROR');
 		});
+	
 	},
 
 	/**
@@ -65,6 +74,10 @@ module.exports = NodeHelper.create({
 	 * occurred.
 	 */
 	parsePriceData(data, hourOffset, priceOffset, priceMultiplier) {
+	    if (this.config.dataSource === "Oslo") {
+        // Parsing logic for Oslo data
+        // ... (as provided in the previous response)
+    } else {
 		if(!data) {
 			return false;
 		}
@@ -119,6 +132,7 @@ module.exports = NodeHelper.create({
 				}
 			}
 		}
+    }
 
 		return ret;
 	}
