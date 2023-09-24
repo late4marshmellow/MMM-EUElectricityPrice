@@ -85,6 +85,9 @@ Module.register("MMM-FiElectricityPrice", {
 
     socketNotificationReceived: function(notification, payload) { 
 		console.log('socketNotificationReceived');
+	        if (notification === "CONFIG") {
+        this.sendSocketNotification("SET_CONFIG", this.config);
+    }
         if(notification === "PRICEDATA") {
 			this.error = false;
 			this.priceData = payload;
