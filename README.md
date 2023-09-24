@@ -28,6 +28,7 @@ Enter these details in the config.js for your MagicMirror installation:
             header: 'Electricity Price',
             position: "top_right",
             config: {
+	    dataSource: "Oslo" // or "Finnish"
             }
         },
 
