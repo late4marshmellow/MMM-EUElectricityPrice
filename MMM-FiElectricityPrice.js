@@ -1,13 +1,14 @@
 /* Magic Mirror
- * Module: MMM-FiElectricityPrice
+ * Module: MMM-NoElectricityPrice
  *
  * By JanneKalliola
  *
  */
-Module.register("MMM-FiElectricityPrice", {
+
+Module.register("MMM-NoElectricityPrice", {
 
 	defaults: {
-		dataSource: 'https://www.nordpoolgroup.com/api/marketdata/page/35?currency=EUR',
+		dataSource: 'Finnish', // 'Finnish' or 'Oslo' 'https://www.nordpoolgroup.com/api/marketdata/page/35?currency=EUR',
 		errorMessage: 'Data could not be fetched.',
 		loadingMessage: 'Loading data...',
 		showPastHours: 24,
@@ -75,19 +76,25 @@ Module.register("MMM-FiElectricityPrice", {
 
 	getPriceData: function() {
 		console.log('getPriceData');
+		let url;
+		if (this.config.dataSource === "Oslo") {
+			url = "https://www.nordpoolgroup.com/api/marketdata/page/23?currency=NOK";
+		} else if (this.config.dataSource === "Finnish") {
+			url = "https://www.nordpoolgroup.com/api/marketdata/page/35?currency=EUR";
+		}
         this.sendSocketNotification('GET_PRICEDATA', {
-			url: this.config.dataSource,
+			url: url,
 			hourOffset: this.config.hourOffset,
 			priceOffset: this.config.priceOffset,
-			priceMultiplier: this.config.priceMultiplier
+			priceMultiplier: this.config.priceMultiplier,
+			dataSource: this.config.dataSource,
 		});
     },
 
-    socketNotificationReceived: function(notification, payload) { 
+    socketNotificationReceived: function(notification, payload, data) { 
 		console.log('socketNotificationReceived');
-	        if (notification === "CONFIG") {
-        this.sendSocketNotification("SET_CONFIG", this.config);
-    }
+		console.log(notification, payload) // delete this!
+		console.log('Raw Oslo Data:', data); // delete this!
         if(notification === "PRICEDATA") {
 			this.error = false;
 			this.priceData = payload;
