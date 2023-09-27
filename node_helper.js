@@ -12,9 +12,6 @@ module.exports = NodeHelper.create({
 	
 
 	socketNotificationReceived: function(notification, payload) {
-	if (notification === "SET_CONFIG") {
-        this.config = payload;
-    }
         if(notification === 'GET_PRICEDATA') {
             this.getPriceData(payload.url, payload.hourOffset, payload.priceOffset, payload.priceMultiplier);
         }
@@ -30,10 +27,8 @@ module.exports = NodeHelper.create({
 	 * @param Double priceOffset The offset to be added on top of the price.
 	 * @param Double priceMultiplier The multiplier of the price. The price will be multiplied first and then offset is added.
 	 */
-	getPriceData(url, hourOffset, priceOffset, priceMultiplier) {
-		    if (this.config.dataSource === "Oslo") {
-        url = "https://www.nordpoolgroup.com/api/marketdata/page/23?currency=NOK";
-    }
+	getPriceData(url, hourOffset, priceOffset, priceMultiplier, dataSource) {
+		console.log('getpricedata')
 		https.get(url, (res) => {
 			let body = '';
 
@@ -44,20 +39,20 @@ module.exports = NodeHelper.create({
 			res.on('end', () => {
 				try {
 					let json = JSON.parse(body);
-					let ret = this.parsePriceData(json, hourOffset, priceOffset, priceMultiplier);
+					let ret = this.parsePriceData(json, hourOffset, priceOffset, priceMultiplier, dataSource);
 					if(ret === false) {
-						this.sendSocketNotification('PRICEDATAERROR');
+						this.sendSocketNotification('PRICEDATAERROR', 'ret = false');
 					}
 					else {
 						this.sendSocketNotification('PRICEDATA', ret);
 					}
 				} catch (error) {
-					this.sendSocketNotification('PRICEDATAERROR');
+					this.sendSocketNotification('PRICEDATAERROR', error);
 				};
 			});
 
 		}).on('error', (error) => {
-			this.sendSocketNotification('PRICEDATAERROR');
+			this.sendSocketNotification('PRICEDATAERROR', '.on');
 		});
 	
 	},
@@ -73,38 +68,46 @@ module.exports = NodeHelper.create({
 	 * @return Object The parsed price data or false, if an error
 	 * occurred.
 	 */
-	parsePriceData(data, hourOffset, priceOffset, priceMultiplier) {
-	    if (this.config.dataSource === "Oslo") {
-    let ret = [];
-    
-    // Loop through each row in the data
-    for (let row of data.data.Rows) {
-        // Find the column for Oslo
-        let osloColumn = row.Columns.find(column => column.Name === "Oslo");
-        
-        if (osloColumn) {
-            // Extract the value and convert it to a number
-            let price = parseFloat(osloColumn.Value.replace(',', '.')); // Convert comma to dot for decimal
-            price = price * priceMultiplier + priceOffset;
-            
-            // Extract the start time for the interval
-            let startTime = new Date(row.StartTime);
-            
-            // Adjust for the hour offset if provided
-            if (hourOffset) {
-                startTime.setHours(startTime.getHours() + hourOffset);
-            }
-            
-            ret.push({
-                time: startTime,
-                price: price
-            });
-        }
-    }
-    
-    return ret;
-
-    } else {
+	parsePriceData(data, hourOffset, priceOffset, priceMultiplier, dataSource) {
+		console.log('doing dataparse');
+		let ret = [];
+	
+		if (dataSource === "Oslo") {
+			console.log('oslo dataparse');
+	
+			// Loop through each row in the data
+			for (let row of data.data.Rows) {
+				const cleanedName = row.Name.replace(/&nbsp;/g, ' ');
+			
+				if (!/^(\d{2} - \d{2})$/.test(cleanedName)) {
+					continue; 
+				}
+			
+				const osloData = row.Columns.find(column => column.Name === "Oslo");
+			
+				if (osloData) {
+					// Calculate price in euro cents per MWh
+					const price = parseInt(osloData.Value.replace(',', '.'), 10); // * priceMultiplier + priceOffset;
+					//const price_kWh = value / 1000;
+			
+					// Offset the hours to match the local time
+					let dt = new Date(row.StartTime);
+					dt.setTime(dt.getTime() + hourOffset * 60 * 60 * 1000);
+			
+					let offsetDate = "" + dt.getFullYear() + '-' +
+						("0" + (dt.getMonth() + 1)).slice(-2) + '-' +
+						("0" + dt.getDate()).slice(-2);
+					let offsetTime = ("0" + dt.getHours()).slice(-2) + ':00:00';
+			
+					ret.push({
+						date: offsetDate,
+						time: offsetTime,
+						value: price // _kWh
+					});
+				}
+			}
+			} else {
+		console.log('finnish data parse')
 		if(!data) {
 			return false;
 		}
@@ -125,7 +128,7 @@ module.exports = NodeHelper.create({
 			priceMultiplier = 0;
 		}
 		data = data['data']['Rows'];
-		let ret = [];
+		//let ret = [];
 		for(let j = 0; j < 7; j++) {
 			for(let i = 23; i >= 0; i--) {
 				let row = data[i];
@@ -159,8 +162,8 @@ module.exports = NodeHelper.create({
 				}
 			}
 		}
-    }
+	}
 
-		return ret;
+        return ret;
 	}
 });
