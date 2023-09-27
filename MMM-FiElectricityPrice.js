@@ -1,11 +1,11 @@
 /* Magic Mirror
- * Module: MMM-NoElectricityPrice
+ * Module: MMM-FiElectricityPrice
  *
  * By JanneKalliola
  *
  */
 
-Module.register("MMM-NoElectricityPrice", {
+Module.register("MMM-FiElectricityPrice", {
 
 	defaults: {
 		dataSource: 'Finnish', // 'Finnish' or 'Oslo' 'https://www.nordpoolgroup.com/api/marketdata/page/35?currency=EUR',
