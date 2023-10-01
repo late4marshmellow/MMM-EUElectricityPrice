@@ -1,14 +1,14 @@
 /* Magic Mirror
- * Module: MMM-NoElectricityPrice
+ * Module: MMM-EUElectricityPrice
  *
- * By JanneKalliola
+ * By JanneKalliola (MMM-FiElectricityPrice), Forked By late4marshmellow
  *
  */
 
-Module.register("MMM-NoElectricityPrice", {
+Module.register("MMM-EUElectricityPrice", {
 
 	defaults: {
-		dataSource: 'Finnish', // 'Finnish' or 'Oslo' 'https://www.nordpoolgroup.com/api/marketdata/page/35?currency=EUR',
+		dataSource: 'Oslo', // 'Finnish' or 'Oslo' More will be added
 		errorMessage: 'Data could not be fetched.',
 		loadingMessage: 'Loading data...',
 		showPastHours: 24,
@@ -37,11 +37,11 @@ Module.register("MMM-NoElectricityPrice", {
 		updateUIInterval: 5 * 60
 	},
 
-	getScripts: function() {
+	getScripts: function () {
 		return [this.file('node_modules/chart.js/dist/chart.min.js')];
 	},
 
-	start: function() {
+	start: function () {
 		this.error = false;
 		this.priceData = false;
 		this.priceMetadata = {};
@@ -50,8 +50,8 @@ Module.register("MMM-NoElectricityPrice", {
 		this.scheduleUIUpdate();
 	},
 
-	schedulePriceUpdate: function() { 
-		if(this.timeout) {
+	schedulePriceUpdate: function () {
+		if (this.timeout) {
 			clearTimeout(this.timeout);
 			this.timeout = false;
 		}
@@ -60,47 +60,52 @@ Module.register("MMM-NoElectricityPrice", {
 
 		let now = new Date();
 		let updateMoment = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 16, 1, 0, 0).getTime() - now.getTime();
-		if(updateMoment < 1000) {
+		if (updateMoment < 1000) {
 			updateMoment += 86400000;
 		}
 		this.timeout = setTimeout(this.schedulePriceUpdate, updateMoment);
 	},
 
-	scheduleUIUpdate: function() {
+	scheduleUIUpdate: function () {
 		var self = this;
-        setInterval(() => {
+		setInterval(() => {
 			self.updateDom();
-        }, this.config.updateUIInterval * 1000);
+		}, this.config.updateUIInterval * 1000);
 		this.updateDom();
-    },
+	},
 
-	getPriceData: function() {
+	getPriceData: function () {
 		console.log('getPriceData');
 		let url;
 		if (this.config.dataSource === "Oslo") {
-			url = "https://www.nordpoolgroup.com/api/marketdata/page/23?currency=NOK";
+			url = "https://www.nordpoolgroup.com/api/marketdata/page/10?currency=NOK";
 		} else if (this.config.dataSource === "Finnish") {
 			url = "https://www.nordpoolgroup.com/api/marketdata/page/35?currency=EUR";
 		}
-        this.sendSocketNotification('GET_PRICEDATA', {
+		console.log("passing on ", url)
+		this.sendSocketNotification('GET_PRICEDATA', {
 			url: url,
 			hourOffset: this.config.hourOffset,
 			priceOffset: this.config.priceOffset,
 			priceMultiplier: this.config.priceMultiplier,
 			dataSource: this.config.dataSource,
 		});
-    },
+	},
 
-    socketNotificationReceived: function(notification, payload, data) { 
+	socketNotificationReceived: function (notification, payload) {
 		console.log('socketNotificationReceived');
-		console.log(notification, payload) // delete this!
-		console.log('Raw Oslo Data:', data); // delete this!
-        if(notification === "PRICEDATA") {
+
+		//console.log(notification, payload.jsonData) // delete this!
+		//console.log(notification, payload) // delete this!
+
+		if (notification === "PRICEDATA") {
+			console.log('pricedata ok')
+			console.log(payload)
 			this.error = false;
 			this.priceData = payload;
-			if(this.priceData.length > 0) {
+			if (this.priceData.length > 0) {
 				let sum = 0;
-				for(let i = 0; i < this.priceData.length; i++) {
+				for (let i = 0; i < this.priceData.length; i++) {
 					sum += this.priceData[i].value;
 				}
 				this.priceMetadata['average'] = sum / this.priceData.length;
@@ -108,48 +113,49 @@ Module.register("MMM-NoElectricityPrice", {
 			else {
 				this.priceMetadata['average'] = false;
 			}
-        }
-		else if(notification === "PRICEDATAERROR") {
+		}
+		else if (notification === "PRICEDATAERROR") {
+			console.log("Error:", payload);//delete
 			this.setError();
 		}
-        this.updateDom();
-    },
+		this.updateDom();
+	},
 
-	setError: function() {
+	setError: function () {
 		this.error = true;
 		this.priceData = false;
 		setTimeout(this.schedulePriceUpdate, 30 * 60 * 1000);
 	},
-	
-	getDom: function() {
+
+	getDom: function () {
 		var wrapper = document.createElement("div");
 
-		if(this.error) {
+		if (this.error) {
 			wrapper.innerHTML = this.config.errorMessage;
 			wrapper.className = 'dimmed light small';
 			return wrapper;
 		}
 
-		if(this.priceData) {
+		if (this.priceData) {
 			let now = new Date();
 			let currentTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), 0, 0, 0);
 
 			// Change time to get local time from toISOString()
 			currentTime = new Date(currentTime - currentTime.getTimezoneOffset() * 60000).toISOString();
-			
+
 			let currentDate = currentTime.substring(0, 10);
 			currentTime = currentTime.substring(11, 19);
 
 			let currentHourMark = false;
-			for(let i = 0; i < this.priceData.length; i++) {
-				if(this.priceData[i].date == currentDate &&
-				   this.priceData[i].time == currentTime) {
+			for (let i = 0; i < this.priceData.length; i++) {
+				if (this.priceData[i].date == currentDate &&
+					this.priceData[i].time == currentTime) {
 					currentHourMark = i;
 					break;
 				}
 			}
 
-			if(currentHourMark === false) {
+			if (currentHourMark === false) {
 				this.setError();
 				wrapper.innerHTML = this.config.errorMessage;
 				wrapper.className = 'dimmed light small';
@@ -158,10 +164,10 @@ Module.register("MMM-NoElectricityPrice", {
 
 			let futureMark = 0;
 			let pastMark = this.priceData.length - 1;
-			if(this.config.showFutureHours !== false) {
+			if (this.config.showFutureHours !== false) {
 				futureMark = Math.max(currentHourMark - this.config.showFutureHours, 0);
 			}
-			if(this.config.showPastHours !== false) {
+			if (this.config.showPastHours !== false) {
 				pastMark = Math.min(currentHourMark + this.config.showPastHours, this.priceData.length - 1);
 			}
 
@@ -172,45 +178,45 @@ Module.register("MMM-NoElectricityPrice", {
 			let showBg = [];
 			let alertLimit = false;
 			let safeLimit = false;
-			if(this.config.alertLimit !== false) {
-				if(this.config.alertLimit == 'average') {
+			if (this.config.alertLimit !== false) {
+				if (this.config.alertLimit == 'average') {
 					alertLimit = this.priceMetadata['average'];
 				}
 				else {
 					alertLimit = this.config.alertLimit * 1000;
 				}
 			}
-			if(this.config.safeLimit !== false) {
-				if(this.config.safeLimit == 'average') {
+			if (this.config.safeLimit !== false) {
+				if (this.config.safeLimit == 'average') {
 					safeLimit = this.priceMetadata['average'];
 				}
 				else {
 					safeLimit = this.config.safeLimit * 1000;
 				}
 			}
-			
-			for(let i = pastMark; i >= futureMark; i--) {
+
+			for (let i = pastMark; i >= futureMark; i--) {
 				showData.push(this.priceData[i].value / 1000);
-				if(this.priceData[i].time[0] == '0') {
+				if (this.priceData[i].time[0] == '0') {
 					showLabel.push(this.priceData[i].time.substring(1, 5));
 				}
 				else {
 					showLabel.push(this.priceData[i].time.substring(0, 5));
 				}
 				showAverage.push(this.priceMetadata['average'] / 1000);
-				if(i > currentHourMark) {
+				if (i > currentHourMark) {
 					showColor.push(this.config.pastColor);
 					showBg.push(this.config.pastBg);
 				}
-				else if(alertLimit !== false && this.priceData[i].value > alertLimit) {
+				else if (alertLimit !== false && this.priceData[i].value > alertLimit) {
 					showColor.push(this.config.alertColor);
 					showBg.push(this.config.alertBg);
 				}
-				else if(safeLimit !== false && this.priceData[i].value < safeLimit) {
+				else if (safeLimit !== false && this.priceData[i].value < safeLimit) {
 					showColor.push(this.config.safeColor);
 					showBg.push(this.config.safeBg);
 				}
-				else if(i < currentHourMark) {
+				else if (i < currentHourMark) {
 					showColor.push(this.config.futureColor);
 					showBg.push(this.config.futureBg);
 				}
@@ -222,11 +228,11 @@ Module.register("MMM-NoElectricityPrice", {
 
 			var chart = document.createElement("div");
 			chart.className = 'small light';
-			
+
 			var canvas = document.createElement('canvas');
 
 			let averageSet = {};
-			if(this.config.showAverage) {
+			if (this.config.showAverage) {
 				averageSet = {
 					type: 'line',
 					label: 'Average',
@@ -236,13 +242,13 @@ Module.register("MMM-NoElectricityPrice", {
 					pointRadius: 0,
 					order: 1,
 					datalabels: {
-                        display: false
-                    }
+						display: false
+					}
 				};
 			}
-			
+
 			let gridConfig = {};
-			if(this.config.showGrid) {
+			if (this.config.showGrid) {
 				gridConfig['display'] = true;
 				gridConfig['color'] = this.config.gridColor;
 			}
@@ -265,10 +271,10 @@ Module.register("MMM-NoElectricityPrice", {
 						barPercentage: 0.75,
 						order: 2,
 						datalabels: {
-                            display: false
-                        }
+							display: false
+						}
 					},
-					averageSet]
+						averageSet]
 				},
 				options: {
 					scales: {
@@ -282,12 +288,12 @@ Module.register("MMM-NoElectricityPrice", {
 						x: {
 							ticks: {
 								color: this.config.labelColor,
-								callback: function(value, index, ticks) {
+								callback: function (value, index, ticks) {
 									let val = this.getLabelForValue(value);
-									if(self.config.tickInterval > 0) {
+									if (self.config.tickInterval > 0) {
 										let hour = val.split(':');
 										hour = parseInt(hour[0]);
-										if(hour % self.config.tickInterval == 0) {
+										if (hour % self.config.tickInterval == 0) {
 											return val;
 										}
 										return null;
