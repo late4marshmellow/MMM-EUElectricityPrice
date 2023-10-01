@@ -79,9 +79,9 @@ Module.register("MMM-EUElectricityPrice", {
 		console.log('getPriceData');
 		let url;
 		let currency;
-		if this.config.dataSource === 'SE3'{
+		if (this.config.dataSource === 'SE3'){
 			currency = 'SEK'
-		} else if this.config.dataSource === 'Oslo'{
+		} else if (this.config.dataSource === 'Oslo'){
 			currency = 'NOK'
 		} else {
 			currency ='EUR'
