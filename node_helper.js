@@ -1,5 +1,5 @@
 /* Magic Mirror
- * Module: MMM-EUElectricityPrice
+ * Module: MMM-FiElectricityPrice
  *
  * By JanneKalliola (MMM-FiElectricityPrice), Forked by late4marshmellow
  *
@@ -48,13 +48,7 @@ module.exports = NodeHelper.create({
 						this.sendSocketNotification('PRICEDATA', ret);
 					}
 				} catch (error) {
-					//this.sendSocketNotification('PRICEDATAERROR', { message: error.message });
-					//let combinedPayload = {
-					//jsonData: json, 
-					//		parsePriceData: ret, 
-					//			errorMessage: error.message,
-					//				error: error,
-					//				};
+
 					this.sendSocketNotification('PRICEDATAERROR', error.message);
 				};
 			});
