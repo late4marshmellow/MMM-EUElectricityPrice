@@ -7,7 +7,7 @@
 
 
 Module.register("MMM-EUElectricityPrice", {
-	validDataSources = ['Oslo', 'SE3'],
+	validDataSources: ['Oslo', 'SE3'],
 	defaults: {
 		dataSource: 'Oslo', // 'Finnish' 'SE3' or 'Oslo' More will be added
 		errorMessage: 'Data could not be fetched.',
