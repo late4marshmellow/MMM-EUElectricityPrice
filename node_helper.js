@@ -14,7 +14,7 @@ module.exports = NodeHelper.create({
 
 	socketNotificationReceived: function (notification, payload) {
 		if (notification === 'GET_PRICEDATA') {
-			this.getPriceData(payload.url, payload.hourOffset, payload.priceOffset, payload.priceMultiplier, payload.dataSource);
+			this.getPriceData(payload.url, payload.hourOffset, payload.priceOffset, payload.priceMultiplier, payload.dataSource, payload.validDataSources);
 		}
 	},
 
@@ -28,7 +28,7 @@ module.exports = NodeHelper.create({
 	 * @param Double priceOffset The offset to be added on top of the price.
 	 * @param Double priceMultiplier The multiplier of the price. The price will be multiplied first and then offset is added.
 	 */
-	getPriceData(url, hourOffset, priceOffset, priceMultiplier, dataSource) {
+	getPriceData(url, hourOffset, priceOffset, priceMultiplier, dataSource, validDataSources) {
 		console.log('getpricedata')
 		https.get(url, (res) => {
 			let body = '';
@@ -40,7 +40,7 @@ module.exports = NodeHelper.create({
 			res.on('end', () => {
 				try {
 					let json = JSON.parse(body);
-					let ret = this.parsePriceData(json, hourOffset, priceOffset, priceMultiplier, dataSource);
+					let ret = this.parsePriceData(json, hourOffset, priceOffset, priceMultiplier, dataSource, validDataSources);
 					if (ret === false) {
 						this.sendSocketNotification('PRICEDATAERROR', 'ret = false');
 					}
@@ -70,13 +70,12 @@ module.exports = NodeHelper.create({
 	 * @return Object The parsed price data or false, if an error
 	 * occurred.
 	 */
-	parsePriceData(data, hourOffset, priceOffset, priceMultiplier, dataSource) {
+	parsePriceData(data, hourOffset, priceOffset, priceMultiplier, dataSource, validDataSources) {
 		console.log('doing dataparse');
 		let ret = [];
 
-		const validDataSources = ['Oslo', 'SE3']
 		if (validDataSources.includes(dataSource)) {
-			console.log('oslo dataparse');
+			console.log(dataSource, ' dataparse');
 			if (!data) {
 				return { error: "Data is missing." };
 			}
@@ -108,14 +107,14 @@ module.exports = NodeHelper.create({
 				}
 
 				//const priceTime = row.StartTime.split("T")[1].substring(0, 2); // Extract the hour part
-				const osloData = row.Columns.find(column => column.Name === "Oslo");
-				//console.log("Before accessing osloData.Value:", osloData);
+				const sourceData = row.Columns.find(column => column.Name === dataSource);
+				//console.log("Before accessing sourceData.Value:", sourceData);
 
-				if (osloData) {
+				if (sourceData) {
 					let price;
-					if (osloData && typeof osloData.Value === 'string') {
+					if (sourceData && typeof sourceData.Value === 'string') {
 						// Calculate price in cents per MWh
-						price = ((parseFloat(osloData.Value.replace(',', '.'), 10) + priceOffset) * 100) * priceMultiplier;
+						price = ((parseFloat(sourceData.Value.replace(',', '.'), 10) + priceOffset) * 100) * priceMultiplier;
 					} else {
 						// Handle the error or set a default value for price
 						price = 0; 

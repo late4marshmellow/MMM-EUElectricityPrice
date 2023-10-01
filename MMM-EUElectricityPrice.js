@@ -78,8 +78,16 @@ Module.register("MMM-EUElectricityPrice", {
 	getPriceData: function () {
 		console.log('getPriceData');
 		let url;
+		let currency;
+		if this.config.dataSource === 'SE3'{
+			currency = 'SEK'
+		} else if this.config.dataSource === 'Oslo'{
+			currency = 'NOK'
+		} else {
+			currency ='EUR'
+		}
 		if (this.validDataSources.includes(this.config.dataSource)) {
-			url = "https://www.nordpoolgroup.com/api/marketdata/page/10?currency=NOK";
+			url = `https://www.nordpoolgroup.com/api/marketdata/page/10?currency=${currency}`;
 		} else if (this.config.dataSource === "Finnish") {
 			url = "https://www.nordpoolgroup.com/api/marketdata/page/35?currency=EUR";
 		}
