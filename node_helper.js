@@ -74,7 +74,8 @@ module.exports = NodeHelper.create({
 		console.log('doing dataparse');
 		let ret = [];
 
-		if (dataSource === "Oslo") {
+		const validDataSources = ['Oslo', 'SE3']
+		if (validDataSources.includes(dataSource)) {
 			console.log('oslo dataparse');
 			if (!data) {
 				return { error: "Data is missing." };

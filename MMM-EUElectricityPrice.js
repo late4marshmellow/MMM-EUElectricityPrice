@@ -5,10 +5,11 @@
  *
  */
 
-Module.register("MMM-EUElectricityPrice", {
 
+Module.register("MMM-EUElectricityPrice", {
+	validDataSources = ['Oslo', 'SE3'],
 	defaults: {
-		dataSource: 'Oslo', // 'Finnish' or 'Oslo' More will be added
+		dataSource: 'Oslo', // 'Finnish' 'SE3' or 'Oslo' More will be added
 		errorMessage: 'Data could not be fetched.',
 		loadingMessage: 'Loading data...',
 		showPastHours: 24,
@@ -77,7 +78,7 @@ Module.register("MMM-EUElectricityPrice", {
 	getPriceData: function () {
 		console.log('getPriceData');
 		let url;
-		if (this.config.dataSource === "Oslo") {
+		if (this.validDataSources.includes(this.config.dataSource)) {
 			url = "https://www.nordpoolgroup.com/api/marketdata/page/10?currency=NOK";
 		} else if (this.config.dataSource === "Finnish") {
 			url = "https://www.nordpoolgroup.com/api/marketdata/page/35?currency=EUR";
@@ -89,6 +90,7 @@ Module.register("MMM-EUElectricityPrice", {
 			priceOffset: this.config.priceOffset,
 			priceMultiplier: this.config.priceMultiplier,
 			dataSource: this.config.dataSource,
+			validDataSources: this.validDataSources,
 		});
 	},
 
