@@ -1,8 +1,8 @@
 {
-    "name": "mmm-fielectricityprice",
+    "name": "mmm-euelectricityprice",
     "version": "0.0.1",
     "description": "Finnish Electricity price chart",
-    "main": "MMM-fielectricityprice.js",
+    "main": "MMM-euelectricityprice.js",
     "author": "Janne Kalliola",
     "license": "MIT",
     "dependencies": {

@@ -7,9 +7,10 @@
 
 
 Module.register("MMM-EUElectricityPrice", {
-	validDataSources: ['Oslo', 'SE3'],
+	validDataSources: ['Oslo', 'Kr.sand', 'Bergen', 'Molde', 'Tromsø', 'SE1', 'SE2', 'SE3', 'SE4', 'FI', 'DK1', 'DK2', 'EE', 'LV', 'LT', 'AT', 'BE', 'DE-LU', 'FR', 'NL'],
 	defaults: {
-		dataSource: 'Oslo', // 'Finnish' 'SE3' or 'Oslo' More will be added
+		dataSource: 'Oslo', // valid sources https://www.nordpoolgroup.com/en/Market-data1/Dayahead/Area-Prices/ALL1/Hourly/?view=table
+		tomorrowDataTime: 13, //time, HH (24H) when data should be available nextday. Default for CET/CEST is 13
 		errorMessage: 'Data could not be fetched.',
 		loadingMessage: 'Loading data...',
 		showPastHours: 24,
@@ -35,7 +36,7 @@ Module.register("MMM-EUElectricityPrice", {
 		safeColor: 'rgba(0, 255, 0, 1)',
 		safeBg: 'rgba(0, 255,0, 0.8)',
 		tickInterval: false,
-		updateUIInterval: 5 * 60
+		updateUIInterval: 5 * 60 // #(minute) * 60
 	},
 
 	getScripts: function () {
@@ -60,7 +61,7 @@ Module.register("MMM-EUElectricityPrice", {
 		this.getPriceData();
 
 		let now = new Date();
-		let updateMoment = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 16, 1, 0, 0).getTime() - now.getTime();
+		let updateMoment = new Date(now.getFullYear(), now.getMonth(), now.getDate(), this.config.tomorrowDataTime, 1, 0, 0).getTime() - now.getTime();
 		if (updateMoment < 1000) {
 			updateMoment += 86400000;
 		}
@@ -78,7 +79,15 @@ Module.register("MMM-EUElectricityPrice", {
 	getPriceData: function () {
 		console.log('getPriceData');
 		let url;
+		let urlTomorrow;
 		let currency;
+		let today = new Date();
+		let formattedToday = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
+
+		let tomorrow = new Date();
+		tomorrow.setDate(today.getDate() + 1);
+		let formattedTomorrow = `${tomorrow.getDate()}-${tomorrow.getMonth() + 1}-${tomorrow.getFullYear()}`;
+
 		if (this.config.dataSource === 'SE3'){
 			currency = 'SEK'
 		} else if (this.config.dataSource === 'Oslo'){
@@ -87,13 +96,16 @@ Module.register("MMM-EUElectricityPrice", {
 			currency ='EUR'
 		}
 		if (this.validDataSources.includes(this.config.dataSource)) {
-			url = `https://www.nordpoolgroup.com/api/marketdata/page/10?currency=${currency}`;
+			url = `https://www.nordpoolgroup.com/api/marketdata/page/10?currency=${currency}&endDate=${formattedToday}`;
+			urlTomorrow = `https://www.nordpoolgroup.com/api/marketdata/page/10?currency=${currency}&endDate=${formattedTomorrow}`;
 		} else if (this.config.dataSource === "Finnish") {
 			url = "https://www.nordpoolgroup.com/api/marketdata/page/35?currency=EUR";
 		}
 		console.log("passing on ", url)
 		this.sendSocketNotification('GET_PRICEDATA', {
 			url: url,
+			urlTomorrow: urlTomorrow,
+			tomorrowDataTime: this.config.tomorrowDataTime,
 			hourOffset: this.config.hourOffset,
 			priceOffset: this.config.priceOffset,
 			priceMultiplier: this.config.priceMultiplier,
@@ -141,6 +153,8 @@ Module.register("MMM-EUElectricityPrice", {
 		var wrapper = document.createElement("div");
 
 		if (this.error) {
+			console.log('heres the culprit 1')
+
 			wrapper.innerHTML = this.config.errorMessage;
 			wrapper.className = 'dimmed light small';
 			return wrapper;
@@ -166,6 +180,11 @@ Module.register("MMM-EUElectricityPrice", {
 			}
 
 			if (currentHourMark === false) {
+				console.log('heres the culprit 2')
+				console.log('Current Date:', currentDate);
+console.log('Current Time:', currentTime);
+console.log('Sample Data:', this.priceData.slice(0, 3));
+
 				this.setError();
 				wrapper.innerHTML = this.config.errorMessage;
 				wrapper.className = 'dimmed light small';
