@@ -1,9 +1,10 @@
 # MMM-EUElectricityPrice
-Magic Mirror Module to display Finnish electricity prices from Nord Pool. The module can be used to show data from other regions from Nord Pool, but I have not tested it with them.
+Thank you JanneKalliola for creating this great module, in need for norwegian data on my MMM i've forked his fork and added possiblity for EU data. 
+Magic Mirror Module to display EU electricity prices from Nord Pool.
 
-The module loads the electricity prices when started and then every day at 16:01 local time of your MagicMirror installation. The prices are shown as a bar chart with optional average value and highlights for high and low prices, both limits are configurable.
+The module loads the electricity prices when started and then every day at time set with "tomorrowDataTime" default is 1pm local time of your MagicMirror installation. The prices are shown as a bar chart with optional average value and highlights for high and low prices, both limits are configurable.
 
-The module reads the data that is shown on this page: https://www.nordpoolgroup.com/en/Market-data1/Dayahead/Area-Prices/FI/Hourly/?view=table
+The module reads the data that is shown on this page: https://www.nordpoolgroup.com/en/Market-data1/Dayahead/Area-Prices/ALL1/Hourly/?view=table
 
 ![Screenshot](fielectricityprice.png "Screenshot")
 
@@ -12,8 +13,8 @@ The module reads the data that is shown on this page: https://www.nordpoolgroup.
 Clone this repository in your modules folder, and install dependencies:
 
     cd ~/MagicMirror/modules 
-    git clone https://github.com/jannekalliola/MMM-FiElectricityPrice
-    cd MMM-FiElectricityPrice
+    git clone https://github.com/late4marshmellow/MMM-EUElectricityPrice
+    cd MMM-EUElectricityPrice
     npm install 
 
 
@@ -28,7 +29,7 @@ Enter these details in the config.js for your MagicMirror installation:
             header: 'Electricity Price',
             position: "top_right",
             config: {
-	    dataSource: "Oslo" // or "Finnish"
+	    dataSource: "Oslo" // "Finnish" for original datasource or the values found here: https://www.nordpoolgroup.com/en/Market-data1/Dayahead/Area-Prices/ALL1/Hourly/?view=table
             }
         },
 
@@ -46,9 +47,7 @@ The module has the following configuration options:
   <tbody>
     <tr>
       <td><code>dataSource</code></td>
-      <td><code>https://www.nordpoolgroup.com/
-	  api/marketdata/page/35?
-	  currency=EUR</code></td>
+      <td><code>Oslo</code></td>
       <td>The URL where to load the data. Nord Pool lists the available pages here: https://www.nordpoolgroup.com/api/marketdata/queries/</td>
     </tr>
     <tr>
