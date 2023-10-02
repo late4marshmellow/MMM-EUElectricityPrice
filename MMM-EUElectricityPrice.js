@@ -9,8 +9,9 @@
 Module.register("MMM-EUElectricityPrice", {
 	validDataSources: ['Oslo', 'Kr.sand', 'Bergen', 'Molde', 'Tromsø', 'SE1', 'SE2', 'SE3', 'SE4', 'FI', 'DK1', 'DK2', 'EE', 'LV', 'LT', 'AT', 'BE', 'DE-LU', 'FR', 'NL'],
 	defaults: {
-		dataSource: 'Oslo', // valid sources https://www.nordpoolgroup.com/en/Market-data1/Dayahead/Area-Prices/ALL1/Hourly/?view=table
-		tomorrowDataTime: 13, //time, HH (24H) when data should be available nextday. Default for CET/CEST is 13
+		dataSource: 'Oslo', //sting, valid sources https://www.nordpoolgroup.com/en/Market-data1/Dayahead/Area-Prices/ALL1/Hourly/?view=table
+		tomorrowDataTime: 13, //integrer, time, HH (24H) when data should be available nextday. Default for CET/CEST is 13
+		tomorrowDataTimeMinute: 1, //integrer, default should be 1
 		errorMessage: 'Data could not be fetched.',
 		loadingMessage: 'Loading data...',
 		showPastHours: 24,
@@ -18,6 +19,11 @@ Module.register("MMM-EUElectricityPrice", {
 		hourOffset: 1,
 		priceOffset: 0,
 		priceMultiplier: 1,
+		width: null, //string, set to px e.g "600px"
+		height: null, //sting, set to px eg. "600px"
+		posRight: null, //string, px
+		posDown: null, //sting, px
+		chartType: 'bar', //sting, line or bar
 		showAverage: true,
 		averageColor: '#fff',
 		showGrid: true,
@@ -59,13 +65,14 @@ Module.register("MMM-EUElectricityPrice", {
 		}
 
 		this.getPriceData();
-
+		let hour = this.config.tomorrowDataTime;
+		let minute = this.config.tomorrowDataTimeMinute;
 		let now = new Date();
-		let updateMoment = new Date(now.getFullYear(), now.getMonth(), now.getDate(), this.config.tomorrowDataTime, 1, 0, 0).getTime() - now.getTime();
+		let updateMoment = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0).getTime() - now.getTime();
 		if (updateMoment < 1000) {
 			updateMoment += 86400000;
 		}
-		this.timeout = setTimeout(this.schedulePriceUpdate, updateMoment);
+		this.timeout = setTimeout(() => this.schedulePriceUpdate(), updateMoment);
 	},
 
 	scheduleUIUpdate: function () {
@@ -88,12 +95,12 @@ Module.register("MMM-EUElectricityPrice", {
 		tomorrow.setDate(today.getDate() + 1);
 		let formattedTomorrow = `${tomorrow.getDate()}-${tomorrow.getMonth() + 1}-${tomorrow.getFullYear()}`;
 
-		if (this.config.dataSource === 'SE3'){
+		if (this.config.dataSource === 'SE3') {
 			currency = 'SEK'
-		} else if (this.config.dataSource === 'Oslo'){
+		} else if (this.config.dataSource === 'Oslo') {
 			currency = 'NOK'
 		} else {
-			currency ='EUR'
+			currency = 'EUR'
 		}
 		if (this.validDataSources.includes(this.config.dataSource)) {
 			url = `https://www.nordpoolgroup.com/api/marketdata/page/10?currency=${currency}&endDate=${formattedToday}`;
@@ -102,6 +109,9 @@ Module.register("MMM-EUElectricityPrice", {
 			url = "https://www.nordpoolgroup.com/api/marketdata/page/35?currency=EUR";
 		}
 		console.log("passing on ", url)
+		if (urlTomorrow) {
+			console.log("passing on ", urlTomorrow)
+		}
 		this.sendSocketNotification('GET_PRICEDATA', {
 			url: url,
 			urlTomorrow: urlTomorrow,
@@ -151,9 +161,16 @@ Module.register("MMM-EUElectricityPrice", {
 
 	getDom: function () {
 		var wrapper = document.createElement("div");
+		if (this.config.width) {
+			wrapper.style.width = this.config.width;
+			wrapper.style.transform = `translate(${this.config.posRight}, ${this.config.posDown})`;
+		}
+
+		if (this.config.height) {
+			wrapper.style.height = this.config.height;
+		}
 
 		if (this.error) {
-			console.log('heres the culprit 1')
 
 			wrapper.innerHTML = this.config.errorMessage;
 			wrapper.className = 'dimmed light small';
@@ -180,11 +197,6 @@ Module.register("MMM-EUElectricityPrice", {
 			}
 
 			if (currentHourMark === false) {
-				console.log('heres the culprit 2')
-				console.log('Current Date:', currentDate);
-console.log('Current Time:', currentTime);
-console.log('Sample Data:', this.priceData.slice(0, 3));
-
 				this.setError();
 				wrapper.innerHTML = this.config.errorMessage;
 				wrapper.className = 'dimmed light small';
@@ -287,12 +299,12 @@ console.log('Sample Data:', this.priceData.slice(0, 3));
 
 			let self = this;
 			var myChart = new Chart(canvas, {
-				type: 'bar',
+				type: this.config.chartType,
 				data: {
 					labels: showLabel,
 					datasets: [{
 						label: 'Cnt per kWh',
-						type: 'bar',
+						type: this.config.chartType,
 						data: showData,
 						backgroundColor: showBg,
 						borderColor: showColor,

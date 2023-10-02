@@ -17,57 +17,55 @@ module.exports = NodeHelper.create({
 		}
 	},
 
-	//urlTomorrow, hourOffset, payload.priceOffset, payload.priceMultiplier, payload.dataSource, validDataSources//
-
-/**
- * Parses the loaded price data to simplify processing on the 
- * front-end.
- *
- * @param {Object} data - The price data.
- * @param {Object} payload - An object containing configuration and additional data:
- *    - {Int} payload.hourOffset - The local time offset from CET/CEST.
- *    - {Double} [payload.priceOffset=0] - The offset to be added on top of the price.
- *    - {Double} [payload.priceMultiplier=1] - The multiplier of the price. The price will be multiplied first and then offset is added.
- * @return {Object} The parsed price data or false, if an error occurred.
- */
+	/**
+	 * Parses the loaded price data to simplify processing on the 
+	 * front-end.
+	 *
+	 * @param {Object} data - The price data.
+	 * @param {Object} payload - An object containing configuration and additional data.
+	 *    @property {Int} hourOffset - The local time offset from CET/CEST.
+	 *    @property {Double} [priceOffset=0] - The offset to be added on top of the price.
+	 *    @property {Double} [priceMultiplier=1] - The multiplier of the price. The price will be multiplied first and then offset is added.
+	 * @return {Object} The parsed price data or false, if an error occurred.
+	 */
 
 	getPriceData(payload) {
 		console.log('getpricedata');
-		
+
 		// Fetch data for today
 		https.get(payload.url, (res) => {
 			let body = '';
-	
+
 			res.on('data', (chunk) => {
 				body += chunk;
 			});
-	
+
 			res.on('end', () => {
 				let jsonToday = JSON.parse(body);
-	
-				// If the current hour is 13 (1 PM) or later, fetch data from urlTomorrow
+
+				// If the current hour is tomorrowDataTime or later, and urlTomorrow is "truthy" also fetch data from urlTomorrow 
 				let currentHour = new Date().getHours();
 				if (currentHour >= payload.tomorrowDataTime && payload.urlTomorrow) {
 					https.get(payload.urlTomorrow, (resTomorrow) => {
 						let bodyTomorrow = '';
-						
+
 						resTomorrow.on('data', (chunk) => {
 							bodyTomorrow += chunk;
 						});
-						
+
 						resTomorrow.on('end', () => {
 							let jsonTomorrow = JSON.parse(bodyTomorrow);
-							
+
 							// Combine jsonToday and jsonTomorrow
-							let combinedData = { 
+							let combinedData = {
 								data: {
 									Rows: [...jsonToday.data.Rows, ...jsonTomorrow.data.Rows]
 								}
 							};
-	
+
 							this.processAndSendData(combinedData, payload);
 						});
-						
+
 					}).on('error', (error) => {
 						// Handle the error appropriately for tomorrow's data fetch
 					});
@@ -75,12 +73,12 @@ module.exports = NodeHelper.create({
 					this.processAndSendData(jsonToday, payload);
 				}
 			});
-			
+
 		}).on('error', (error) => {
 			this.sendSocketNotification('PRICEDATAERROR', '.on');
 		});
 	},
-	
+
 	processAndSendData(data, payload) {
 		let ret = this.parsePriceData(data, payload);
 		if (ret === false) {
@@ -91,18 +89,19 @@ module.exports = NodeHelper.create({
 	},
 
 	/**
-	 * Parses the loaded price data to simplify processing on the 
-	 * front-end.
+	 * Parses the loaded price data to simplify processing on the front-end.
 	 *
-	 * @param Object The price data.
-	 * @param Int hourOffset The local time offset from CET/CEST.
-	 * @param Double payload.priceOffset The offset to be added on top of the price.
-	 * @param Double payload.priceMultiplier The multiplier of the price. The price will be multiplied first and then offset is added.
-	 * @return Object The parsed price data or false, if an error
-	 * occurred.
+	 * @param {Object} data - The raw price data to be parsed.
+	 * @param {Object} payload - An object containing configuration and additional data for parsing.
+	 *    @property {Int} hourOffset - The local time offset from CET/CEST.
+	 *    @property {Double} [priceOffset=0] - The offset to be added on top of the price.
+	 *    @property {Double} [priceMultiplier=1] - The multiplier of the price. The price will be multiplied first and then offset is added.
+	 *    @property {String} dataSource - Identifier for the desired data source.
+	 *    @property {Array} validDataSources - List of valid data sources.
+	 * @return {Object|Array} The parsed price data, an array of processed data, or an error object if an issue occurs.
 	 */
 	parsePriceData(data, payload) {
-		console.log('doing dataparse');
+		console.log('Start dataparse');
 		let ret = [];
 
 		if (payload.validDataSources.includes(payload.dataSource)) {
@@ -148,7 +147,7 @@ module.exports = NodeHelper.create({
 						price = ((parseFloat(sourceData.Value.replace(',', '.'), 10) + payload.priceOffset) * 100) * payload.priceMultiplier;
 					} else {
 						// Handle the error or set a default value for price
-						price = 0; 
+						price = 0;
 					}
 
 
@@ -169,9 +168,8 @@ module.exports = NodeHelper.create({
 					ret.unshift(retRow);
 				}
 			}
-			console.log(payload.dataSource, 'data OK') // delete
 		} else {
-			console.log('finnish data parse')
+			console.log('Old Finnish data parse')
 			if (!data) {
 				return false;
 			}
@@ -192,7 +190,6 @@ module.exports = NodeHelper.create({
 				payload.priceMultiplier = 0;
 			}
 			data = data['data']['Rows'];
-			//let ret = [];
 			for (let j = 0; j < 7; j++) {
 				for (let i = 23; i >= 0; i--) {
 					let row = data[i];
