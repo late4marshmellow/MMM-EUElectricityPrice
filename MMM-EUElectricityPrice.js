@@ -9,7 +9,7 @@
 Module.register("MMM-EUElectricityPrice", {
 	validDataSources: ['Oslo', 'Kr.sand', 'Bergen', 'Molde', 'Tromsø', 'SE1', 'SE2', 'SE3', 'SE4', 'FI', 'DK1', 'DK2', 'EE', 'LV', 'LT', 'AT', 'BE', 'DE-LU', 'FR', 'NL'],
 	defaults: {
-		dataSource: 'Oslo', //sting, valid sources https://www.nordpoolgroup.com/en/Market-data1/Dayahead/Area-Prices/ALL1/Hourly/?view=table
+		dataSource: 'Oslo', //string, valid sources https://www.nordpoolgroup.com/en/Market-data1/Dayahead/Area-Prices/ALL1/Hourly/?view=table
 		tomorrowDataTime: 13, //integrer, time, HH (24H) when data should be available nextday. Default for CET/CEST is 13
 		tomorrowDataTimeMinute: 1, //integrer, default should be 1
 		errorMessage: 'Data could not be fetched.',
@@ -19,10 +19,12 @@ Module.register("MMM-EUElectricityPrice", {
 		hourOffset: 1,
 		priceOffset: 0,
 		priceMultiplier: 1,
+		//module size and reposition
 		width: null, //string, set to px e.g "600px"
 		height: null, //sting, set to px eg. "600px"
-		posRight: null, //string, px
-		posDown: null, //sting, px
+		posRight: null, //string, px moves module left/right
+		posDown: null, //sting, px moves module up/down
+		//end module size and reposition
 		chartType: 'bar', //sting, line or bar
 		showAverage: true,
 		averageColor: '#fff',
