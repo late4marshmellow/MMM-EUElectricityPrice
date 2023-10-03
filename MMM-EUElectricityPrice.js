@@ -131,8 +131,8 @@ Module.register("MMM-EUElectricityPrice", {
 		//console.log(notification, payload) // delete this!
 
 		if (notification === "PRICEDATA") {
-			console.log('pricedata ok')
-			console.log(payload)
+			//console.log('pricedata ok')
+			//console.log(payload)
 			this.error = false;
 			this.priceData = payload;
 			if (this.priceData.length > 0) {
