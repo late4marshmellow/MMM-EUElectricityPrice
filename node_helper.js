@@ -144,7 +144,7 @@ module.exports = NodeHelper.create({
 					let price;
 					if (sourceData && typeof sourceData.Value === 'string') {
 						// Calculate price in cents per MWh
-						price = ((parseFloat(sourceData.Value.replace(',', '.'), 10) + payload.priceOffset) * 100) * payload.priceMultiplier;
+						price = ((parseFloat(sourceData.Value.replace(',', '.'), 10) * 100) * payload.priceMultiplier) + payload.priceOffset;
 					} else {
 						// Handle the error or set a default value for price
 						price = 0;
