@@ -10,6 +10,7 @@ Module.register("MMM-EUElectricityPrice", {
 	validDataSources: ['Oslo', 'Kr.sand', 'Bergen', 'Molde', 'Tromsø', 'SE1', 'SE2', 'SE3', 'SE4', 'FI', 'DK1', 'DK2', 'EE', 'LV', 'LT', 'AT', 'BE', 'DE-LU', 'FR', 'NL'],
 	defaults: {
 		dataSource: 'Oslo', //string, valid sources https://www.nordpoolgroup.com/en/Market-data1/Dayahead/Area-Prices/ALL1/Hourly/?view=table
+		currency: 'NOK', // NOK, SEK, EUR, DKK
 		tomorrowDataTime: 13, //integrer, time, HH (24H) when data should be available nextday. Default for CET/CEST is 13
 		tomorrowDataTimeMinute: 1, //integrer, default should be 1
 		errorMessage: 'Data could not be fetched.',
@@ -300,6 +301,11 @@ Module.register("MMM-EUElectricityPrice", {
 			}
 
 			let self = this;
+			let pointSizes = [];
+
+			if (this.config.chartType === 'line') {
+				pointSizes = showData.map((_, idx) => idx === currentHourMark ? 10 : 2);
+			}
 			var myChart = new Chart(canvas, {
 				type: this.config.chartType,
 				data: {
@@ -354,6 +360,47 @@ Module.register("MMM-EUElectricityPrice", {
 					}
 				}
 			});
+			if (this.config.chartType === 'line') {
+				myChart.data.datasets[0].pointRadius = pointSizes;
+			}
+    /*// Extracting Data for Display
+    let currentValue = (this.priceData[currentHourMark].value / 1000).toFixed(2);
+	let next24HoursData = this.priceData.slice(currentHourMark, currentHourMark + 24);
+	let lowestValue = (Math.min(...next24HoursData.map(item => item.value)) / 1000).toFixed(2);
+	let highestValue = (Math.max(...next24HoursData.map(item => item.value)) / 1000).toFixed(2);
+	let todaysAverage = (this.priceMetadata['average'] / 1000).toFixed(2);
+    */
+	let currentValue = (this.priceData[currentHourMark].value / 1000).toFixed(2);
+
+// Past 24 Hours Data
+let past24HoursData = this.priceData.slice(Math.max(currentHourMark - 24, 0), currentHourMark);
+let lowestValuePast24H = (Math.min(...past24HoursData.map(item => item.value)) / 1000).toFixed(2);
+let highestValuePast24H = (Math.max(...past24HoursData.map(item => item.value)) / 1000).toFixed(2);
+
+// Today's Average
+let todaysAverage = (this.priceMetadata['average'] / 1000).toFixed(2);
+
+    // Creating DOM Elements for Display
+    var infoDiv = document.createElement("div");
+    infoDiv.className = 'bright';
+
+infoDiv.innerHTML = `
+    <div style="@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap'); font-family: 'Roboto', sans-serif;">
+        <span style="font-size: 0.8em;">Now: </span>
+        <span style="font-size: 1.2em; font-weight: bold;">${currentValue}</span>
+        <span style="font-size: 0.8em;"> ${this.config.currency} cents/kWh</span>
+        <br>
+        <span style="font-size: 0.6em;">
+            <span style="color: blue;">&darr;</span> ${lowestValuePast24H} cents 
+            <span style="color: #aaa;">&nbsp;&bull;&nbsp;</span> 
+            <span style="color: red;">&uarr;</span> ${highestValuePast24H} cents 
+            <span style="color: #aaa;">&nbsp;&bull;&nbsp;</span> 
+            ≈ ${todaysAverage} cents
+        </span>
+    </div>
+`;
+    // Append infoDiv before the chart
+    wrapper.appendChild(infoDiv);
 
 			chart.appendChild(canvas);
 			wrapper.appendChild(chart);
