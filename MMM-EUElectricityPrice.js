@@ -48,6 +48,9 @@ Module.register("MMM-EUElectricityPrice", {
 		safeBg: 'rgba(0, 255,0, 0.8)',
 		//line chart only
 		borderWidthLine: 3, //integer, 1-10 (1 is thin, 10 is thick) sets the thickness of the line chart
+		pointRegular: 4, //integer, 1-10 (1 is small, 10 is big) sets the size of the points in the line chart
+		pointCurrent: 10, //integer, 1-10 (1 is small, 10 is big) sets the size of the current point in the line chart
+		//bar chart only
 		tickInterval: false,
 		updateUIInterval: 5 * 60 // #(minute) * 60
 	},
@@ -310,7 +313,7 @@ Module.register("MMM-EUElectricityPrice", {
 
 			if (this.config.chartType === 'line') {
 				//pointSizes = showData.map((_, idx) => idx === currentHourMark ? 10 : 2);
-				pointSizes = showData.map((_, idx) => idx === (showData.length - 1 - currentHourMark) ? 10 : 5);
+				pointSizes = showData.map((_, idx) => idx === (showData.length - 1 - currentHourMark) ? this.config.pointCurrent : this.config.pointRegular);
 
 			}
 			var myChart = new Chart(canvas, {
