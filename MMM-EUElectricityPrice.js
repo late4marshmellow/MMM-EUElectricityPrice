@@ -51,6 +51,7 @@ Module.register("MMM-EUElectricityPrice", {
 		pointRegular: 4, //integer, 1-10 (1 is small, 10 is big) sets the size of the points in the line chart
 		pointCurrent: 10, //integer, 1-10 (1 is small, 10 is big) sets the size of the current point in the line chart
 		//bar chart only
+		//Other
 		tickInterval: false,
 		updateUIInterval: 5 * 60 // #(minute) * 60
 	},
