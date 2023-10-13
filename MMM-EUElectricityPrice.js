@@ -28,7 +28,7 @@ Module.register("MMM-EUElectricityPrice", {
 		posRight: null, //string, px moves module left/right
 		posDown: null, //sting, px moves module up/down
 		//end module size and reposition
-		chartType: 'bar', //sting, line or bar
+		chartType: 'bar', //string, line or bar
 		showAverage: true,
 		averageColor: '#fff',
 		showGrid: true,
@@ -46,6 +46,8 @@ Module.register("MMM-EUElectricityPrice", {
 		safeLimit: false,
 		safeColor: 'rgba(0, 255, 0, 1)',
 		safeBg: 'rgba(0, 255,0, 0.8)',
+		//line chart only
+		borderWidthLine: 3, //integer, 1-10 (1 is thin, 10 is thick) sets the thickness of the line chart
 		tickInterval: false,
 		updateUIInterval: 5 * 60 // #(minute) * 60
 	},
@@ -307,7 +309,7 @@ Module.register("MMM-EUElectricityPrice", {
 
 			if (this.config.chartType === 'line') {
 				//pointSizes = showData.map((_, idx) => idx === currentHourMark ? 10 : 2);
-				pointSizes = showData.map((_, idx) => idx === (showData.length - 1 - currentHourMark) ? 10 : 2);
+				pointSizes = showData.map((_, idx) => idx === (showData.length - 1 - currentHourMark) ? 10 : 5);
 
 			}
 			var myChart = new Chart(canvas, {
@@ -366,6 +368,9 @@ Module.register("MMM-EUElectricityPrice", {
 			});
 			if (this.config.chartType === 'line') {
 				myChart.data.datasets[0].pointRadius = pointSizes;
+				myChart.data.datasets[0].borderWidth = this.config.borderWidthLine; // Increase thickness for line chart
+				myChart.update();
+
 			}
     /*// Extracting Data for Display
     let currentValue = (this.priceData[currentHourMark].value / 1000).toFixed(2);
