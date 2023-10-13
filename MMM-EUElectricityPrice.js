@@ -306,6 +306,7 @@ Module.register("MMM-EUElectricityPrice", {
 
 			let self = this;
 			let pointSizes = [];
+			let borderWidth = (this.config.chartType === 'line') ? this.config.borderWidthLine : 1;
 
 			if (this.config.chartType === 'line') {
 				//pointSizes = showData.map((_, idx) => idx === currentHourMark ? 10 : 2);
@@ -322,7 +323,7 @@ Module.register("MMM-EUElectricityPrice", {
 						data: showData,
 						backgroundColor: showBg,
 						borderColor: showColor,
-						borderWidth: 1,
+						borderWidth: borderWidth,
 						barPercentage: 0.75,
 						order: 2,
 						datalabels: {
@@ -368,9 +369,6 @@ Module.register("MMM-EUElectricityPrice", {
 			});
 			if (this.config.chartType === 'line') {
 				myChart.data.datasets[0].pointRadius = pointSizes;
-				myChart.data.datasets[0].borderWidth = this.config.borderWidthLine; // Increase thickness for line chart
-				myChart.update();
-
 			}
     /*// Extracting Data for Display
     let currentValue = (this.priceData[currentHourMark].value / 1000).toFixed(2);
