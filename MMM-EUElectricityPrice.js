@@ -306,7 +306,9 @@ Module.register("MMM-EUElectricityPrice", {
 			let pointSizes = [];
 
 			if (this.config.chartType === 'line') {
-				pointSizes = showData.map((_, idx) => idx === currentHourMark ? 10 : 2);
+				//pointSizes = showData.map((_, idx) => idx === currentHourMark ? 10 : 2);
+				pointSizes = showData.map((_, idx) => idx === (showData.length - 1 - currentHourMark) ? 10 : 2);
+
 			}
 			var myChart = new Chart(canvas, {
 				type: this.config.chartType,
