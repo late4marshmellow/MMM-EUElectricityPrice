@@ -1,5 +1,5 @@
 # MMM-EUElectricityPrice
-Thank you JanneKalliola for creating this great module, in need for norwegian data on my MMM i've forked his fork and added possiblity for EU data. 
+Thank you JanneKalliola for creating this great module, in need for norwegian data on my MMM i've forked his work and added possiblity for EU data. 
 Magic Mirror Module to display EU electricity prices from Nord Pool.
 
 The module loads the electricity prices when started and then every day at time set with "tomorrowDataTime" default is 1pm local time of your MagicMirror installation. The prices are shown as a bar chart with optional average value and highlights for high and low prices, both limits are configurable.
