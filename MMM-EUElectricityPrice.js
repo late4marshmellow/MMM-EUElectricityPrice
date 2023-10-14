@@ -50,8 +50,6 @@ Module.register("MMM-EUElectricityPrice", {
 		borderWidthLine: 3, //integer, 1-10 (1 is thin, 10 is thick) sets the thickness of the line chart
 		pointRegular: 4, //integer, 1-10 (1 is small, 10 is big) sets the size of the points in the line chart
 		pointCurrent: 10, //integer, 1-10 (1 is small, 10 is big) sets the size of the current point in the line chart
-		defaultPointBg: '#fff', 
-		defaultPointBorder: '#fff', 
 		//bar chart only
 		//Other
 		tickInterval: false,
@@ -230,8 +228,6 @@ Module.register("MMM-EUElectricityPrice", {
 			let showLabel = [];
 			let showColor = [];
 			let showBg = [];
-			let pointBackgroundColors = [];
-			let pointBorderColors = [];
 			let alertLimit = false;
 			let safeLimit = false;
 			if (this.config.alertLimit !== false) {
@@ -252,37 +248,41 @@ Module.register("MMM-EUElectricityPrice", {
 			}
 
 			for (let i = pastMark; i >= futureMark; i--) {
-				showData.push(this.priceData[i].value / 1000);
-				if (this.priceData[i].time[0] == '0') {
-					showLabel.push(this.priceData[i].time.substring(1, 5));
-				}
-				else {
-					showLabel.push(this.priceData[i].time.substring(0, 5));
-				}
+				// Extract value and time from the data
+				const { value, time } = this.priceData[i];
+			
+				// Add normalized value to showData
+				showData.push(value / 1000);
+			
+				// Handle label formatting and add to showLabel
+				showLabel.push(time[0] === '0' ? time.substring(1, 5) : time.substring(0, 5));
+			
+				// Add normalized average to showAverage
 				showAverage.push(this.priceMetadata['average'] / 1000);
-				if (i > currentHourMark) {
+			
+				// Determine color and background based on conditions and add to respective arrays
+				if (i === currentHourMark) {
+					showColor.push(this.config.currentColor);
+					showBg.push(this.config.currentBg);
+				}
+				else if (i > currentHourMark) {
 					showColor.push(this.config.pastColor);
 					showBg.push(this.config.pastBg);
 				}
-				else if (alertLimit !== false && this.priceData[i].value > alertLimit) {
+				else if (alertLimit !== false && value > alertLimit) {
 					showColor.push(this.config.alertColor);
 					showBg.push(this.config.alertBg);
 				}
-				else if (safeLimit !== false && this.priceData[i].value < safeLimit) {
+				else if (safeLimit !== false && value < safeLimit) {
 					showColor.push(this.config.safeColor);
 					showBg.push(this.config.safeBg);
 				}
-				else if (i < currentHourMark) {
+				else {
 					showColor.push(this.config.futureColor);
 					showBg.push(this.config.futureBg);
 				}
-				else {
-					showColor.push(this.config.currentColor);
-					showBg.push(this.config.currentBg);
-					pointBackgroundColors.push(this.config.defaultPointBg);
-					pointBorderColors.push(this.config.defaultPointBorder);
-				}
 			}
+			
 
 			var chart = document.createElement("div");
 			chart.className = 'small light';
@@ -333,8 +333,6 @@ Module.register("MMM-EUElectricityPrice", {
 						data: showData,
 						backgroundColor: showBg,
 						borderColor: showColor,
-						pointBackgroundColor: pointBackgroundColors,
-						pointBorderColor: pointBorderColors,
 						borderWidth: borderWidth,
 						barPercentage: 0.75,
 						order: 2,
