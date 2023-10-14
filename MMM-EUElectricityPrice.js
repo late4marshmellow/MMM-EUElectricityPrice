@@ -38,6 +38,7 @@ Module.register("MMM-EUElectricityPrice", {
 		pastBg: 'rgba(255, 255, 255, 0.3)',
 		currentColor: '#fff',
 		currentBg: '#fff',
+		currentbgSwitch: false, //boolean, true or false, if true currentBg is used, if false currentBg is not used
 		futureColor: 'rgba(255, 255, 255, 0.8)',
 		futureBg: 'rgba(255, 255, 255, 0.6)',
 		alertLimit: false,
@@ -263,7 +264,13 @@ Module.register("MMM-EUElectricityPrice", {
 				// Determine color and background based on conditions and add to respective arrays
 				if (i === currentHourMark) {
 					showColor.push(this.config.currentColor);
-					showBg.push(this.config.currentBg);
+					if (this.config.currentbgSwitch) {
+						showBg.push(this.config.currentBg);
+					}
+					//else {
+					//	showBg.push(this.config.futureBg);
+					//}
+					//showBg.push(this.config.currentBg);
 				}
 				else if (i > currentHourMark) {
 					showColor.push(this.config.pastColor);
