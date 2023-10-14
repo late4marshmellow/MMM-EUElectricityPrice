@@ -410,10 +410,10 @@ let todaysAverage = (this.priceMetadata['average'] / 1000).toFixed(2);
 
 infoDiv.innerHTML = `
     <div style="@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap'); font-family: 'Roboto', sans-serif;">
-	<span style="font-size: 1.2em; font-weight: bold;">${this.config.headText}</span><br>
+	<span style="font-size: 1.2em; font-weight: bold;">${this.config.headText} ${this.config.currency}</span><br>
 	<span style="font-size: 0.8em;">Now: </span>
         <span style="font-size: 1.2em; font-weight: bold;">${currentValue}</span>
-        <span style="font-size: 0.8em;"> ${this.config.currency} ${this.config.centName}/kWh</span>
+        <span style="font-size: 0.8em;"> ${this.config.centName}/kWh</span>
         <br>
         <span style="font-size: 0.6em;">
             <span style="color: blue;">&darr;</span> ${lowestValuePast24H} ${this.config.centName}  
