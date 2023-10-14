@@ -333,6 +333,8 @@ Module.register("MMM-EUElectricityPrice", {
 						data: showData,
 						backgroundColor: showBg,
 						borderColor: showColor,
+						pointBackgroundColor: pointBackgroundColors,
+						pointBorderColor: pointBorderColors,
 						borderWidth: borderWidth,
 						barPercentage: 0.75,
 						order: 2,
