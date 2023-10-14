@@ -50,6 +50,8 @@ Module.register("MMM-EUElectricityPrice", {
 		borderWidthLine: 3, //integer, 1-10 (1 is thin, 10 is thick) sets the thickness of the line chart
 		pointRegular: 4, //integer, 1-10 (1 is small, 10 is big) sets the size of the points in the line chart
 		pointCurrent: 10, //integer, 1-10 (1 is small, 10 is big) sets the size of the current point in the line chart
+		defaultPointBg: '#fff', 
+		defaultPointBorder: '#fff', 
 		//bar chart only
 		//Other
 		tickInterval: false,
@@ -228,6 +230,8 @@ Module.register("MMM-EUElectricityPrice", {
 			let showLabel = [];
 			let showColor = [];
 			let showBg = [];
+			let pointBackgroundColors = [];
+			let pointBorderColors = [];
 			let alertLimit = false;
 			let safeLimit = false;
 			if (this.config.alertLimit !== false) {
@@ -275,6 +279,8 @@ Module.register("MMM-EUElectricityPrice", {
 				else {
 					showColor.push(this.config.currentColor);
 					showBg.push(this.config.currentBg);
+					pointBackgroundColors.push(this.config.defaultPointBg);
+					pointBorderColors.push(this.config.defaultPointBorder);
 				}
 			}
 
