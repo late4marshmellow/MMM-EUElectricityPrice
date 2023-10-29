@@ -11,7 +11,7 @@ Module.register("MMM-EUElectricityPrice", {
 	defaults: {
 		dataSource: 'Oslo', //string, valid sources https://www.nordpoolgroup.com/en/Market-data1/Dayahead/Area-Prices/ALL1/Hourly/?view=table
 		currency: 'NOK', // NOK, SEK, EUR, DKK
-		centName: 'øre', //øre, cents 
+		centName: 'øre', //e.g "øre" or "cents"
 		headText: 'Electricity Price', //string, header text
 		tomorrowDataTime: 13, //integrer, time, HH (24H) when data should be available nextday. Default for CET/CEST is 13
 		tomorrowDataTimeMinute: 1, //integrer, default should be 1
@@ -38,20 +38,24 @@ Module.register("MMM-EUElectricityPrice", {
 		pastBg: 'rgba(255, 255, 255, 0.3)',
 		currentColor: '#fff',
 		currentBg: '#fff',
-		currentbgSwitch: false, //boolean, true or false, if true currentBg is used, if false currentBg is not used
+		currentbgSwitch: false, //boolean, true or false, if true currentBg is used, if false color of current is used, e.g if safe/alert is on this will show
 		futureColor: 'rgba(255, 255, 255, 0.8)',
 		futureBg: 'rgba(255, 255, 255, 0.6)',
 		alertLimit: false,
+		alertValue: 100, // Set the alert threshold in cents per kWh
 		alertColor: 'rgba(255, 0, 0, 1)',
 		alertBg: 'rgba(255, 0,0, 0.8)',
 		safeLimit: false,
+		safeValue: 50, // Set the alert threshold in cents per kWh
 		safeColor: 'rgba(0, 255, 0, 1)',
 		safeBg: 'rgba(0, 255,0, 0.8)',
+		beginAtZero: true, //boolean, true or false, if true the chart always contains the zero line, if false adjusted to active levels
 		//line chart only
 		borderWidthLine: 3, //integer, 1-10 (1 is thin, 10 is thick) sets the thickness of the line chart
 		pointRegular: 4, //integer, 1-10 (1 is small, 10 is big) sets the size of the points in the line chart
 		pointCurrent: 10, //integer, 1-10 (1 is small, 10 is big) sets the size of the current point in the line chart
 		//bar chart only
+		borderWidthBar: 1, //integer, 1-10 (1 is thin, 10 is thick) sets the thickness of the bar chart
 		//Other
 		tickInterval: false,
 		updateUIInterval: 5 * 60 // #(minute) * 60
@@ -99,7 +103,7 @@ Module.register("MMM-EUElectricityPrice", {
 		console.log('getPriceData');
 		let url;
 		let urlTomorrow;
-		let currency;
+		let currency = this.config.currency;
 		let today = new Date();
 		let formattedToday = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
 
@@ -107,13 +111,7 @@ Module.register("MMM-EUElectricityPrice", {
 		tomorrow.setDate(today.getDate() + 1);
 		let formattedTomorrow = `${tomorrow.getDate()}-${tomorrow.getMonth() + 1}-${tomorrow.getFullYear()}`;
 
-		if (this.config.dataSource === 'SE3') {
-			currency = 'SEK'
-		} else if (this.config.dataSource === 'Oslo') {
-			currency = 'NOK'
-		} else {
-			currency = 'EUR'
-		}
+
 		if (this.validDataSources.includes(this.config.dataSource)) {
 			url = `https://www.nordpoolgroup.com/api/marketdata/page/10?currency=${currency}&endDate=${formattedToday}`;
 			urlTomorrow = `https://www.nordpoolgroup.com/api/marketdata/page/10?currency=${currency}&endDate=${formattedTomorrow}`;
@@ -229,22 +227,22 @@ Module.register("MMM-EUElectricityPrice", {
 			let showLabel = [];
 			let showColor = [];
 			let showBg = [];
-			let alertLimit = false;
-			let safeLimit = false;
+			let alertValue = null;
+			let safeValue = null;
 			if (this.config.alertLimit !== false) {
-				if (this.config.alertLimit == 'average') {
-					alertLimit = this.priceMetadata['average'];
+				if (this.config.alertValue == 'average') {
+					alertValue = this.priceMetadata['average'];
 				}
 				else {
-					alertLimit = this.config.alertLimit * 1000;
+					alertValue = this.config.alertValue * 1000;
 				}
 			}
 			if (this.config.safeLimit !== false) {
-				if (this.config.safeLimit == 'average') {
-					safeLimit = this.priceMetadata['average'];
+				if (this.config.safeValue == 'average') {
+					safeValue = this.priceMetadata['average'];
 				}
 				else {
-					safeLimit = this.config.safeLimit * 1000;
+					safeValue = this.config.safeValue * 1000;
 				}
 			}
 
@@ -267,20 +265,20 @@ Module.register("MMM-EUElectricityPrice", {
 					if (this.config.currentbgSwitch) {
 						showBg.push(this.config.currentBg);
 					}
-					//else {
-					//	showBg.push(this.config.futureBg);
-					//}
+					else {
+						showBg.push(this.config.futureBg);
+					}
 					//showBg.push(this.config.currentBg);
 				}
 				else if (i > currentHourMark) {
 					showColor.push(this.config.pastColor);
 					showBg.push(this.config.pastBg);
 				}
-				else if (alertLimit !== false && value > alertLimit) {
+				else if (this.config.alertLimit !== false && value > alertValue) {
 					showColor.push(this.config.alertColor);
 					showBg.push(this.config.alertBg);
 				}
-				else if (safeLimit !== false && value < safeLimit) {
+				else if (this.config.safeLimit !== false && value < safeValue) {
 					showColor.push(this.config.safeColor);
 					showBg.push(this.config.safeBg);
 				}
@@ -323,7 +321,7 @@ Module.register("MMM-EUElectricityPrice", {
 
 			let self = this;
 			let pointSizes = [];
-			let borderWidth = (this.config.chartType === 'line') ? this.config.borderWidthLine : 1;
+			let borderWidth = (this.config.chartType === 'line') ? this.config.borderWidthLine : this.config.borderWidthBar;
 
 			if (this.config.chartType === 'line') {
 				//pointSizes = showData.map((_, idx) => idx === currentHourMark ? 10 : 2);
@@ -353,7 +351,7 @@ Module.register("MMM-EUElectricityPrice", {
 					scales: {
 						y: {
 							grid: gridConfig,
-							beginAtZero: true,
+							beginAtZero: this.config.beginAtZero,
 							ticks: {
 								color: this.config.labelColor
 							}
