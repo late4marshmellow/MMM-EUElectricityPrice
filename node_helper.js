@@ -143,11 +143,16 @@ module.exports = NodeHelper.create({
 				if (sourceData) {
 					let price;
 					if (sourceData && typeof sourceData.Value === 'string') {
+						const cleanValue = sourceData.Value.replace(/\s+/g, '').replace(',', '.');
 						// Calculate price in cents per MWh
-						price = ((parseFloat(sourceData.Value.replace(',', '.'), 10) * 100) * payload.priceMultiplier) + payload.priceOffset;
+						price = ((parseFloat(cleanValue, 10) * 100) * payload.priceMultiplier) + payload.priceOffset;
+						//console.log('sourceData:', sourceData);
+						//console.log('sourceData.Value:', sourceData.Value);
+						//console.log('Calculated Price:', price);
 					} else {
 						// Handle the error or set a default value for price
 						price = 0;
+						//console.error('Invalid sourceData or sourceData.Value is not a string.');
 					}
 
 
