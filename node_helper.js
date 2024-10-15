@@ -59,23 +59,21 @@ module.exports = NodeHelper.create({
 							// Combine jsonToday and jsonTomorrow
 							let combinedData = {
 								data: {
-									Rows: [...jsonToday.data.Rows, ...jsonTomorrow.data.Rows]
+									multiAreaEntries: [...jsonToday.data.multiAreaEntries, ...jsonTomorrow.data.multiAreaEntries]
 								}
 							};
 
 							this.processAndSendData(combinedData, payload);
 						});
-
-					}).on('error', (error) => {
-						// Handle the error appropriately for tomorrow's data fetch
+					}).on('error', (e) => {
+						console.error(`Got error: ${e.message}`);
 					});
 				} else {
 					this.processAndSendData(jsonToday, payload);
 				}
 			});
-
-		}).on('error', (error) => {
-			this.sendSocketNotification('PRICEDATAERROR', '.on');
+		}).on('error', (e) => {
+			console.error(`Got error: ${e.message}`);
 		});
 	},
 
@@ -127,6 +125,45 @@ module.exports = NodeHelper.create({
 
 			// Loop through each entry in the multiAreaEntries
 			for (let entry of data.multiAreaEntries) {
+				// Fetch the price for the specified area (e.g., NO1)
+				let areaData = entry.entryPerArea[payload.dataSource];
+				if (areaData) {
+					// Calculate the price with multiplier and offset
+					let price = (areaData * payload.priceMultiplier) + payload.priceOffset;
+
+					// Offset the hours to match the local time
+					let dt = new Date(entry.deliveryStart);
+					dt.setTime(dt.getTime() + payload.hourOffset * 60 * 60 * 1000);
+
+					// Format the date and time
+					let offsetDate = `${dt.getFullYear()}-${("0" + (dt.getMonth() + 1)).slice(-2)}-${("0" + dt.getDate()).slice(-2)}`;
+					let offsetTime = `${("0" + dt.getHours()).slice(-2)}:00:00`;
+
+					// Construct the result row
+					let retRow = {
+						date: offsetDate,
+						time: offsetTime,
+						value: price
+					};
+					ret.push(retRow); // Change from unshift to push to maintain ascending order
+				}
+			}
+		} else {
+			return { error: "Invalid data source." };
+		}
+		return ret;
+	},
+
+	processData: function(response, payload) {
+		let ret = [];
+		let data = response.data;
+
+		if (data && data.multiAreaEntries) {
+			// Merge today's and tomorrow's data
+			let mergedEntries = data.multiAreaEntries;
+
+			// Iterate over the merged entries
+			for (let entry of mergedEntries) {
 				// Fetch the price for the specified area (e.g., NO1)
 				let areaData = entry.entryPerArea[payload.dataSource];
 				if (areaData) {
