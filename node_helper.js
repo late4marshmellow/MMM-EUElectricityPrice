@@ -184,7 +184,7 @@ module.exports = NodeHelper.create({
 						time: offsetTime,
 						value: price
 					};
-					ret.push(retRow); // Change from unshift to push to maintain ascending order
+					ret.unshift(retRow); // Change from push to unshift to maintain descending order
 				}
 			}
 		} else {
