@@ -1,10 +1,15 @@
 # MMM-EUElectricityPrice
+Breaking update! Oct. 15th 2024
+Because of changes in Nordpool API some existing users need to correct their datasource.
+check : https://data.nordpoolgroup.com/auction/day-ahead/prices?deliveryDate=latest&currency=EUR&aggregation=Hourly&deliveryAreas=EE,LT,LV,AT,BE,FR,GER,NL,PL,DK1,DK2,FI,NO1,NO2,NO3,NO4,NO5,SE1,SE2,SE3,SE4,SYS
+for your updated code.
+
 Thank you JanneKalliola for creating this great module, in need for norwegian data on my MMM i've forked his work and added possiblity for EU data. 
 Magic Mirror Module to display EU electricity prices from Nord Pool.
 
 The module loads the electricity prices when started and then every day at time set with "tomorrowDataTime" default is 1pm local time of your MagicMirror installation. The prices are shown as a bar chart with optional average value and highlights for high and low prices, both limits are configurable.
 
-The module reads the data that is shown on this page: https://www.nordpoolgroup.com/en/Market-data1/Dayahead/Area-Prices/ALL1/Hourly/?view=table
+The module reads the data that is shown on this page: https://data.nordpoolgroup.com/auction/day-ahead/prices?deliveryDate=latest&currency=EUR&aggregation=Hourly&deliveryAreas=EE,LT,LV,AT,BE,FR,GER,NL,PL,DK1,DK2,FI,NO1,NO2,NO3,NO4,NO5,SE1,SE2,SE3,SE4,SYS
 
 ![Screenshot](fielectricityprice.png "Screenshot")
 
@@ -29,7 +34,7 @@ Enter these details in the config.js for your MagicMirror installation:
             header: 'Electricity Price',
             position: "top_right",
             config: {
-	    dataSource: "Oslo" // "Finnish" for original datasource or the values found here: https://www.nordpoolgroup.com/en/Market-data1/Dayahead/Area-Prices/ALL1/Hourly/?view=table
+	    dataSource: "Oslo" // the values found here: https://data.nordpoolgroup.com/auction/day-ahead/prices?deliveryDate=latest&currency=EUR&aggregation=Hourly&deliveryAreas=EE,LT,LV,AT,BE,FR,GER,NL,PL,DK1,DK2,FI,NO1,NO2,NO3,NO4,NO5,SE1,SE2,SE3,SE4,SYS
             }
         },
 

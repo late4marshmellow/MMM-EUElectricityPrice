@@ -7,10 +7,10 @@
 
 
 Module.register("MMM-EUElectricityPrice", {
-	validDataSources: ['Oslo', 'Kr.sand', 'Bergen', 'Molde', 'Tromsø', 'SE1', 'SE2', 'SE3', 'SE4', 'FI', 'DK1', 'DK2', 'EE', 'LV', 'LT', 'AT', 'BE', 'DE-LU', 'FR', 'NL'],
+	validDataSources: ['EE', 'LT', 'LV', 'AT', 'BE', 'FR', 'GER', 'NL', 'PL', 'DK1', 'DK2', 'FI', 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4', 'SYS'],
 	defaults: {
-		dataSource: 'Oslo', //string, valid sources https://www.nordpoolgroup.com/en/Market-data1/Dayahead/Area-Prices/ALL1/Hourly/?view=table
-		currency: 'NOK', // NOK, SEK, EUR, DKK
+		dataSource: 'NO1', //string, valid sources https://data.nordpoolgroup.com/auction/day-ahead/prices?deliveryDate=latest&currency=EUR&aggregation=Hourly&deliveryAreas=EE,LT,LV,AT,BE,FR,GER,NL,PL,DK1,DK2,FI,NO1,NO2,NO3,NO4,NO5,SE1,SE2,SE3,SE4
+		currency: 'NOK', // NOK, SEK, DKK, PLN, EUR
 		centName: 'øre', //e.g "øre" or "cents"
 		headText: 'Electricity Price', //string, header text
 		tomorrowDataTime: 13, //integrer, time, HH (24H) when data should be available nextday. Default for CET/CEST is 13
@@ -105,19 +105,17 @@ Module.register("MMM-EUElectricityPrice", {
 		let urlTomorrow;
 		let currency = this.config.currency;
 		let today = new Date();
-		let formattedToday = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
+		let formattedToday = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
 
 		let tomorrow = new Date();
 		tomorrow.setDate(today.getDate() + 1);
-		let formattedTomorrow = `${tomorrow.getDate()}-${tomorrow.getMonth() + 1}-${tomorrow.getFullYear()}`;
+		let formattedTomorrow = `${tomorrow.getFullYear()}-${tomorrow.getMonth() + 1}-${tomorrow.getDate()}`;
 
 
 		if (this.validDataSources.includes(this.config.dataSource)) {
-			url = `https://www.nordpoolgroup.com/api/marketdata/page/10?currency=${currency}&endDate=${formattedToday}`;
-			urlTomorrow = `https://www.nordpoolgroup.com/api/marketdata/page/10?currency=${currency}&endDate=${formattedTomorrow}`;
-		} else if (this.config.dataSource === "Finnish") {
-			url = "https://www.nordpoolgroup.com/api/marketdata/page/35?currency=EUR";
-		}
+			url = `https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?market=DayAhead&date=${formattedToday}&currency=${currency}&deliveryArea=${this.config.dataSource}`;
+			urlTomorrow = `https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?market=DayAhead&date=${formattedTomorrow}&currency=${currency}&deliveryArea=${this.config.dataSource}`;
+		} 
 		console.log("passing on ", url)
 		if (urlTomorrow) {
 			console.log("passing on ", urlTomorrow)

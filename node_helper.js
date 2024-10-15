@@ -110,124 +110,44 @@ module.exports = NodeHelper.create({
 				return { error: "Data is missing." };
 			}
 
-			if (!data['data'] || !data['data']['Rows']) {
-				return { error: "data or data.Rows is missing." };
+			if (!data.multiAreaEntries) {
+				return { error: "multiAreaEntries is missing." };
 			}
 			if (!payload.hourOffset) {
 				payload.hourOffset = 0;
 			}
 			if (!payload.priceOffset) {
 				payload.priceOffset = 0;
-			}
-			else {
+			} else {
 				payload.priceOffset = payload.priceOffset * 1000;
 			}
 			if (!payload.priceMultiplier) {
-				payload.priceMultiplier = 0;
+				payload.priceMultiplier = 1;
 			}
 
-			// Loop through each row in the data
-			for (let row of data.data.Rows) {
-				// Clean the row's Name of any &nbsp; entities
-				const cleanedName = row.Name.replace(/&nbsp;/g, ' ');
-
-				// Check if the cleaned Name matches the pattern of hourly intervals
-				if (!/^(\d{2} - \d{2})$/.test(cleanedName)) {
-					continue; // Skip this row if it doesn't match the pattern
-				}
-
-				//const priceTime = row.StartTime.split("T")[1].substring(0, 2); // Extract the hour part
-				const sourceData = row.Columns.find(column => column.Name === payload.dataSource);
-				//console.log("Before accessing sourceData.Value:", sourceData);
-
-				if (sourceData) {
-					let price;
-					if (sourceData && typeof sourceData.Value === 'string') {
-						const cleanValue = sourceData.Value.replace(/\s+/g, '').replace(',', '.');
-						// Calculate price in cents per MWh
-						price = ((parseFloat(cleanValue, 10) * 100) * payload.priceMultiplier) + payload.priceOffset;
-						//console.log('sourceData:', sourceData);
-						//console.log('sourceData.Value:', sourceData.Value);
-						//console.log('Calculated Price:', price);
-					} else {
-						// Handle the error or set a default value for price
-						price = 0;
-						//console.error('Invalid sourceData or sourceData.Value is not a string.');
-					}
-
+			// Loop through each entry in the multiAreaEntries
+			for (let entry of data.multiAreaEntries) {
+				let areaData = entry.entryPerArea[payload.dataSource];
+				if (areaData) {
+					let price = (areaData * payload.priceMultiplier) + payload.priceOffset;
 
 					// Offset the hours to match the local time
-					let dt = new Date(row.StartTime);
+					let dt = new Date(entry.deliveryStart);
 					dt.setTime(dt.getTime() + payload.hourOffset * 60 * 60 * 1000);
 
-					let offsetDate = "" + dt.getFullYear() + '-' +
-						("0" + (dt.getMonth() + 1)).slice(-2) + '-' +
-						("0" + dt.getDate()).slice(-2);
-					let offsetTime = ("0" + dt.getHours()).slice(-2) + ':00:00';
+					let offsetDate = `${dt.getFullYear()}-${("0" + (dt.getMonth() + 1)).slice(-2)}-${("0" + dt.getDate()).slice(-2)}`;
+					let offsetTime = `${("0" + dt.getHours()).slice(-2)}:00:00`;
 
 					let retRow = {
 						date: offsetDate,
 						time: offsetTime,
 						value: price
-					}
+					};
 					ret.unshift(retRow);
 				}
 			}
 		} else {
-			console.log('Old Finnish data parse')
-			if (!data) {
-				return false;
-			}
-
-			if (!data['data'] || !data['data']['Rows']) {
-				return false;
-			}
-			if (!payload.hourOffset) {
-				payload.hourOffset = 0;
-			}
-			if (!payload.priceOffset) {
-				payload.priceOffset = 0;
-			}
-			else {
-				payload.priceOffset = payload.priceOffset * 1000;
-			}
-			if (!payload.priceMultiplier) {
-				payload.priceMultiplier = 0;
-			}
-			data = data['data']['Rows'];
-			for (let j = 0; j < 7; j++) {
-				for (let i = 23; i >= 0; i--) {
-					let row = data[i];
-					let priceTime = row['StartTime'].substring(11);
-					if (row['Columns']) {
-						let dp = row['Columns'][j];
-
-						// Calculate price in euro cents per MWh
-						let value = parseInt(dp['Value'].replace(',', ''), 10) * payload.priceMultiplier + payload.priceOffset;
-						let dtold = dp['Name'].substring(6, 10) + '-' + dp['Name'].substring(3, 5) + '-' + dp['Name'].substring(0, 2);
-
-						// Offset the hours to match the local time (Nord Pool hours are in CET/CEST)
-						let dt = new Date(parseInt(dp['Name'].substring(6, 10), 10),
-							parseInt(dp['Name'].substring(3, 5), 10) - 1,
-							parseInt(dp['Name'].substring(0, 2), 10),
-							parseInt(priceTime.substring(0, 2), 10), 0, 0);
-
-						dt.setTime(dt.getTime() + payload.hourOffset * 60 * 60 * 1000);
-
-						let offsetDate = "" + dt.getFullYear() + '-' +
-							("0" + (dt.getMonth() + 1)).slice(-2) + '-' +
-							("0" + dt.getDate()).slice(-2);
-						let offsetTime = ("0" + dt.getHours()).slice(-2) + ':00:00';
-
-						let retRow = {
-							date: offsetDate,
-							time: offsetTime,
-							value: value,
-						}
-						ret.push(retRow);
-					}
-				}
-			}
+			return { error: "Invalid data source." };
 		}
 		return ret;
 	}
