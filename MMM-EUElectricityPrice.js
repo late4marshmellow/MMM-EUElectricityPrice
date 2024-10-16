@@ -21,7 +21,7 @@ Module.register("MMM-EUElectricityPrice", {
 		showPastHours: 24,
 		showFutureHours: 36,
 		hourOffset: 1,
-		priceOffset: 0, // any extra costs added. in cents
+		priceOffset: 0, // any extra costs added. in e.g 7 cents its written as 7, 0.07 is 7 cents
 		priceMultiplier: 1, //add tax, (always minimum 1,  1 is 0% 1,25 is 25%)
 		//module size and reposition
 		width: null, //string, set to px e.g "600px"
