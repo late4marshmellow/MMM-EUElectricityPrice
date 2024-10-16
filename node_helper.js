@@ -117,7 +117,7 @@ module.exports = NodeHelper.create({
 			if (!payload.priceOffset) {
 				payload.priceOffset = 0;
 			} else {
-			payload.priceOffset = payload.priceOffset * 1000;
+			payload.priceOffset = payload.priceOffset / 1000;
 			}
 			if (!payload.priceMultiplier) {
 				payload.priceMultiplier = 1;
