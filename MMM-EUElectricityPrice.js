@@ -8,6 +8,7 @@
 
 Module.register("MMM-EUElectricityPrice", {
 	validDataSources: ['EE', 'LT', 'LV', 'AT', 'BE', 'FR', 'GER', 'NL', 'PL', 'DK1', 'DK2', 'FI', 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4', 'SYS'],
+	validCurrencies: ['NOK', 'SEK', 'DKK', 'PLN', 'EUR'],
 	defaults: {
 		dataSource: 'NO1', //string, valid sources https://data.nordpoolgroup.com/auction/day-ahead/prices?deliveryDate=latest&currency=EUR&aggregation=Hourly&deliveryAreas=EE,LT,LV,AT,BE,FR,GER,NL,PL,DK1,DK2,FI,NO1,NO2,NO3,NO4,NO5,SE1,SE2,SE3,SE4
 		currency: 'NOK', // NOK, SEK, DKK, PLN, EUR
@@ -111,9 +112,17 @@ Module.register("MMM-EUElectricityPrice", {
 		tomorrow.setDate(today.getDate() + 1);
 		let formattedTomorrow = `${tomorrow.getFullYear()}-${tomorrow.getMonth() + 1}-${tomorrow.getDate()}`;
 
+		if (!this.validCurrencies.includes(this.config.currency)) {
+			const errorMessage = `Please change currency to one of the valid ones. Current currency is set as ${currency}`;
+			this.sendSocketNotification('INVALID_CURRENCY', errorMessage);
+			this.setError(errorMessage);
+			return;
+		}
+
 		if (!this.validDataSources.includes(this.config.dataSource)) {
-			this.sendSocketNotification('INVALID_DATASOURCE', `Please change dataSource to one of the valid ones. Current source is set as ${this.config.dataSource}`);
-			this.setError(`Please change dataSource to one of the valid ones. Current source is set as ${this.config.dataSource}`);
+			const errorMessage = `Please change dataSource to one of the valid ones. Current source is set as ${this.config.dataSource}`;
+			this.sendSocketNotification('INVALID_DATASOURCE', errorMessage);
+			this.setError(errorMessage);
 			return;
 		} else {
 			url = `https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?market=DayAhead&date=${formattedToday}&currency=${currency}&deliveryArea=${this.config.dataSource}`;
