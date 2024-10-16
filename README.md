@@ -100,12 +100,12 @@ The module has the following configuration options:
     <tr>
       <td><code>priceMultiplier</code></td>
 	  <td><code>1</code></td>
-      <td>The price will be multiplied with this multiplier. Useful for adding value added tax and like to the price. The <code>priceOffset</code> will be added after multiplication.</td>
+      <td>The price will be multiplied with this multiplier. Useful for adding value added tax and like to the price. The <code>priceOffset</code> will be added after multiplication. <b>ex. 25% VAT is entered as 1.25</b></td>
     </tr>
     <tr>
       <td><code>priceOffset</code></td>
 	  <td><code>0</code></td>
-      <td>The amount of euro cents to add on top of the price. You can use this to add the transfer cost, comission and other costs to get the final price you are paying.</td>
+      <td>The amount in currency to add on top of the price. You can use this to add the transfer cost, comission and other costs to get the final price you are paying. ex 7.13 øre surcharge and 50 øre grid fee is entered as <b>0.5713</b> </td>
     </tr>
     <tr>
       <td><code>showAverage</code></td>
@@ -206,5 +206,7 @@ The module has the following configuration options:
 </table>
 
 ## Changelog
+
+**2024-10-16** Updated to fit new Nordpool API, error message on screen when wrong datasource or currency is entered.
 
 **2022-09-04** Initial version
