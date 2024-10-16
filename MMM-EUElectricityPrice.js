@@ -244,7 +244,7 @@ Module.register("MMM-EUElectricityPrice", {
 				}
 			}
 
-			for (let i = pastMark; i >= futureMark; i--) {
+			for (let i = futureMark; i <= pastMark; i++) {
 				// Extract value and time from the data
 				const { value, time } = this.priceData[i];
 			
