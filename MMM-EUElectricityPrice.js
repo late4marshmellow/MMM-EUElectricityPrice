@@ -114,9 +114,7 @@ Module.register("MMM-EUElectricityPrice", {
 		if (!this.validDataSources.includes(this.config.dataSource)) {
 			this.sendSocketNotification('INVALID_DATASOURCE', `Please change dataSource to one of the valid ones. Current source is set as ${this.config.dataSource}`);
 			return;
-		}
-
-		if (this.validDataSources.includes(this.config.dataSource)) {
+		} else {
 			url = `https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?market=DayAhead&date=${formattedToday}&currency=${currency}&deliveryArea=${this.config.dataSource}`;
 			urlTomorrow = `https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?market=DayAhead&date=${formattedTomorrow}&currency=${currency}&deliveryArea=${this.config.dataSource}`;
 		} 
@@ -190,7 +188,7 @@ Module.register("MMM-EUElectricityPrice", {
 
 		if (this.error) {
 
-			wrapper.innerHTML = this.config.errorMessage || this.config.errorMessage;
+			wrapper.innerHTML = this.errorMessage || this.config.errorMessage;
 			wrapper.className = 'dimmed light small';
 			return wrapper;
 		}
