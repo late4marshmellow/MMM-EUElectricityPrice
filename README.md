@@ -1,7 +1,8 @@
 # MMM-EUElectricityPrice
-Breaking update! Oct. 15th 2024
+### Breaking update! Oct. 15th 2024
 Because of changes in Nordpool API some existing users need to correct their datasource.
-check : https://data.nordpoolgroup.com/auction/day-ahead/prices?deliveryDate=latest&currency=EUR&aggregation=Hourly&deliveryAreas=EE,LT,LV,AT,BE,FR,GER,NL,PL,DK1,DK2,FI,NO1,NO2,NO3,NO4,NO5,SE1,SE2,SE3,SE4,SYS
+
+Please check : https://data.nordpoolgroup.com/map?deliveryDate=latest&currency=EUR&market=DayAhead&mapDataType=Price&resolution=60
 for your updated code.
 
 Thank you JanneKalliola for creating this great module, in need for norwegian data on my MMM i've forked his work and added possiblity for EU data. 
@@ -11,7 +12,15 @@ The module loads the electricity prices when started and then every day at time 
 
 The module reads the data that is shown on this page: https://data.nordpoolgroup.com/auction/day-ahead/prices?deliveryDate=latest&currency=EUR&aggregation=Hourly&deliveryAreas=EE,LT,LV,AT,BE,FR,GER,NL,PL,DK1,DK2,FI,NO1,NO2,NO3,NO4,NO5,SE1,SE2,SE3,SE4,SYS
 
-![Screenshot](fielectricityprice.png "Screenshot")
+
+## Bar chart
+![Screenshot](barchart.png "Screenshot")
+
+
+
+## Line chart
+![Screenshot](linechart.png "Screenshot")
+
 
 ## Installation
 
@@ -27,14 +36,17 @@ Clone this repository in your modules folder, and install dependencies:
 
 Go to the MagicMirror/config directory and edit the config.js file. Add the module to your modules array in your config.js.
 
-Enter these details in the config.js for your MagicMirror installation:
+Enter as minimimum these details in the config.js for your MagicMirror installation:
 
         {
             module: "MMM-EUElectricityPrice",
-            header: 'Electricity Price',
             position: "top_right",
             config: {
-	    dataSource: "Oslo" // the values found here: https://data.nordpoolgroup.com/auction/day-ahead/prices?deliveryDate=latest&currency=EUR&aggregation=Hourly&deliveryAreas=EE,LT,LV,AT,BE,FR,GER,NL,PL,DK1,DK2,FI,NO1,NO2,NO3,NO4,NO5,SE1,SE2,SE3,SE4,SYS
+	    	headText: 'Electricity Price',
+	    	dataSource: 'NO1',
+      		currency: 'NOK', 
+		chartType: 'bar', //can be 'bar' or 'line' (line looks good when module is placed in e.g 'bottom_center'
+     
             }
         },
 
@@ -52,8 +64,13 @@ The module has the following configuration options:
   <tbody>
     <tr>
       <td><code>dataSource</code></td>
-      <td><code>Oslo</code></td>
-      <td>The URL where to load the data. Nord Pool lists the available pages here: https://www.nordpoolgroup.com/api/marketdata/queries/</td>
+      <td><code>NO1</code></td>
+      <td>The URL where to load the data. Nord Pool lists the available pages here: https://data.nordpoolgroup.com/map?deliveryDate=latest&currency=EUR&market=DayAhead&mapDataType=Price&resolution=60 </td>
+    </tr>
+	<tr>
+      <td><code>chartType</code></td>
+      <td><code>bar</code></td>
+      <td>Choose between line or bar type chart</td>
     </tr>
     <tr>
       <td><code>loadingMessage</code></td>
