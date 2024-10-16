@@ -113,6 +113,7 @@ Module.register("MMM-EUElectricityPrice", {
 
 		if (!this.validDataSources.includes(this.config.dataSource)) {
 			this.sendSocketNotification('INVALID_DATASOURCE', `Please change dataSource to one of the valid ones. Current source is set as ${this.config.dataSource}`);
+			this.setError(`Please change dataSource to one of the valid ones. Current source is set as ${this.config.dataSource}`);
 			return;
 		} else {
 			url = `https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?market=DayAhead&date=${formattedToday}&currency=${currency}&deliveryArea=${this.config.dataSource}`;
@@ -162,17 +163,20 @@ Module.register("MMM-EUElectricityPrice", {
 		}
 		else if (notification === "INVALID_DATASOURCE") {
 			console.log("Invalid data source:", payload);
-			this.error = true;
-			this.priceData = false;
-			this.errorMessage = payload;
+			this.setError(payload);
+			//this.error = true;
+			//this.priceData = false;
+			//this.errorMessage = payload;
 		}
 		this.updateDom();
 	},
 
-	setError: function () {
+	setError: function (message) {
 		this.error = true;
 		this.priceData = false;
-		setTimeout(this.schedulePriceUpdate, 30 * 60 * 1000);
+		this.errorMessage = message || this.config.errorMessage;
+		this.updateDom();
+		setTimeout(() => this.schedulePriceUpdate(), 30 * 60 * 1000);
 	},
 
 	getDom: function () {
