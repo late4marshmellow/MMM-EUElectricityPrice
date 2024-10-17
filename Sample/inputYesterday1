@@ -1,0 +1,233 @@
+{
+    "deliveryDateCET": "2024-10-15",
+    "version": 3,
+    "updatedAt": "2024-10-14T11:17:01.6004969Z",
+    "deliveryAreas": [
+        "NO1"
+    ],
+    "market": "DayAhead",
+    "multiAreaEntries": [
+        {
+            "deliveryStart": "2024-10-14T22:00:00Z",
+            "deliveryEnd": "2024-10-14T23:00:00Z",
+            "entryPerArea": {
+                "NO1": 514.27
+            }
+        },
+        {
+            "deliveryStart": "2024-10-14T23:00:00Z",
+            "deliveryEnd": "2024-10-15T00:00:00Z",
+            "entryPerArea": {
+                "NO1": 508.5
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T00:00:00Z",
+            "deliveryEnd": "2024-10-15T01:00:00Z",
+            "entryPerArea": {
+                "NO1": 506.14
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T01:00:00Z",
+            "deliveryEnd": "2024-10-15T02:00:00Z",
+            "entryPerArea": {
+                "NO1": 506.14
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T02:00:00Z",
+            "deliveryEnd": "2024-10-15T03:00:00Z",
+            "entryPerArea": {
+                "NO1": 507.2
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T03:00:00Z",
+            "deliveryEnd": "2024-10-15T04:00:00Z",
+            "entryPerArea": {
+                "NO1": 514.27
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T04:00:00Z",
+            "deliveryEnd": "2024-10-15T05:00:00Z",
+            "entryPerArea": {
+                "NO1": 571.15
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T05:00:00Z",
+            "deliveryEnd": "2024-10-15T06:00:00Z",
+            "entryPerArea": {
+                "NO1": 1523.26
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T06:00:00Z",
+            "deliveryEnd": "2024-10-15T07:00:00Z",
+            "entryPerArea": {
+                "NO1": 1950.74
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T07:00:00Z",
+            "deliveryEnd": "2024-10-15T08:00:00Z",
+            "entryPerArea": {
+                "NO1": 1252.76
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T08:00:00Z",
+            "deliveryEnd": "2024-10-15T09:00:00Z",
+            "entryPerArea": {
+                "NO1": 700.81
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T09:00:00Z",
+            "deliveryEnd": "2024-10-15T10:00:00Z",
+            "entryPerArea": {
+                "NO1": 569.74
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T10:00:00Z",
+            "deliveryEnd": "2024-10-15T11:00:00Z",
+            "entryPerArea": {
+                "NO1": 560.67
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T11:00:00Z",
+            "deliveryEnd": "2024-10-15T12:00:00Z",
+            "entryPerArea": {
+                "NO1": 552.54
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T12:00:00Z",
+            "deliveryEnd": "2024-10-15T13:00:00Z",
+            "entryPerArea": {
+                "NO1": 532.76
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T13:00:00Z",
+            "deliveryEnd": "2024-10-15T14:00:00Z",
+            "entryPerArea": {
+                "NO1": 531.94
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T14:00:00Z",
+            "deliveryEnd": "2024-10-15T15:00:00Z",
+            "entryPerArea": {
+                "NO1": 536.06
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T15:00:00Z",
+            "deliveryEnd": "2024-10-15T16:00:00Z",
+            "entryPerArea": {
+                "NO1": 570.68
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T16:00:00Z",
+            "deliveryEnd": "2024-10-15T17:00:00Z",
+            "entryPerArea": {
+                "NO1": 713.88
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T17:00:00Z",
+            "deliveryEnd": "2024-10-15T18:00:00Z",
+            "entryPerArea": {
+                "NO1": 724.95
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T18:00:00Z",
+            "deliveryEnd": "2024-10-15T19:00:00Z",
+            "entryPerArea": {
+                "NO1": 570.8
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T19:00:00Z",
+            "deliveryEnd": "2024-10-15T20:00:00Z",
+            "entryPerArea": {
+                "NO1": 571.27
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T20:00:00Z",
+            "deliveryEnd": "2024-10-15T21:00:00Z",
+            "entryPerArea": {
+                "NO1": 532.41
+            }
+        },
+        {
+            "deliveryStart": "2024-10-15T21:00:00Z",
+            "deliveryEnd": "2024-10-15T22:00:00Z",
+            "entryPerArea": {
+                "NO1": 480.24
+            }
+        }
+    ],
+    "blockPriceAggregates": [
+        {
+            "blockName": "Off-peak 1",
+            "deliveryStart": "2024-10-14T22:00:00Z",
+            "deliveryEnd": "2024-10-15T06:00:00Z",
+            "averagePricePerArea": {
+                "NO1": {
+                    "average": 643.87,
+                    "min": 506.14,
+                    "max": 1523.26
+                }
+            }
+        },
+        {
+            "blockName": "Peak",
+            "deliveryStart": "2024-10-15T06:00:00Z",
+            "deliveryEnd": "2024-10-15T18:00:00Z",
+            "averagePricePerArea": {
+                "NO1": {
+                    "average": 766.46,
+                    "min": 531.94,
+                    "max": 1950.74
+                }
+            }
+        },
+        {
+            "blockName": "Off-peak 2",
+            "deliveryStart": "2024-10-15T18:00:00Z",
+            "deliveryEnd": "2024-10-15T22:00:00Z",
+            "averagePricePerArea": {
+                "NO1": {
+                    "average": 538.68,
+                    "min": 480.24,
+                    "max": 571.27
+                }
+            }
+        }
+    ],
+    "currency": "NOK",
+    "exchangeRate": 11.77629,
+    "areaStates": [
+        {
+            "state": "Final",
+            "areas": [
+                "NO1"
+            ]
+        }
+    ],
+    "areaAverages": [
+        {
+            "areaCode": "NO1",
+            "price": 687.63
+        }
+    ]
+}
