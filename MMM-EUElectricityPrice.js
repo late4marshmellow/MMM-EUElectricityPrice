@@ -283,40 +283,40 @@ Module.register("MMM-EUElectricityPrice", {
 				const { value, time } = this.priceData[i];
 			
 				// Add normalized value to showData
-				showData.push(value / 1000);
+				showData.unshift(value / 1000);
 			
 				// Handle label formatting and add to showLabel
-				showLabel.push(time[0] === '0' ? time.substring(1, 5) : time.substring(0, 5));
+				showLabel.unshift(time[0] === '0' ? time.substring(1, 5) : time.substring(0, 5));
 			
 				// Add normalized average to showAverage
-				showAverage.push(this.priceMetadata['average'] / 1000);
+				showAverage.unshift(this.priceMetadata['average'] / 1000);
 			
 				// Determine color and background based on conditions and add to respective arrays
 				if (i === currentHourMark) {
-					showColor.push(this.config.currentColor);
+					showColor.unshift(this.config.currentColor);
 					if (this.config.currentbgSwitch) {
-						showBg.push(this.config.currentBg);
+						showBg.unshift(this.config.currentBg);
 					}
 					else {
-						showBg.push(this.config.futureBg);
+						showBg.unshift(this.config.futureBg);
 					}
-					//showBg.push(this.config.currentBg);
+					//showBg.unshift(this.config.currentBg);
 				}
 				else if (i > currentHourMark) {
-					showColor.push(this.config.pastColor);
-					showBg.push(this.config.pastBg);
+					showColor.unshift(this.config.pastColor);
+					showBg.unshift(this.config.pastBg);
 				}
 				else if (this.config.alertLimit !== false && value > alertValue) {
-					showColor.push(this.config.alertColor);
-					showBg.push(this.config.alertBg);
+					showColor.unshift(this.config.alertColor);
+					showBg.unshift(this.config.alertBg);
 				}
 				else if (this.config.safeLimit !== false && value < safeValue) {
-					showColor.push(this.config.safeColor);
-					showBg.push(this.config.safeBg);
+					showColor.unshift(this.config.safeColor);
+					showBg.unshift(this.config.safeBg);
 				}
 				else {
-					showColor.push(this.config.futureColor);
-					showBg.push(this.config.futureBg);
+					showColor.unshift(this.config.futureColor);
+					showBg.unshift(this.config.futureBg);
 				}
 			}
 			

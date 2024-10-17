@@ -50,8 +50,8 @@ module.exports = NodeHelper.create({
 				}
 
 				// Debugging: Log the structure of jsonToday
-				console.log('jsonToday:', JSON.stringify(jsonToday, null, 2));
-				
+				//console.log('jsonToday:', JSON.stringify(jsonToday, null, 2));
+
 				// Fetch data for yesterday	
 				https.get(payload.urlYesterday, (resYesterday) => {
 					let bodyYesterday = '';
@@ -68,13 +68,13 @@ module.exports = NodeHelper.create({
 							console.error('Error parsing tomorrow\'s data:', e.message);
 							return;
 						}
-									// Fetch and combine today's and yesterday's data
-									let combinedData = {
-										multiAreaEntries: [...jsonYesterday.multiAreaEntries, ...jsonToday.multiAreaEntries]
-									};
+						// Fetch and combine today's and yesterday's data
+						let combinedData = {
+							multiAreaEntries: [...jsonYesterday.multiAreaEntries, ...jsonToday.multiAreaEntries]
+						};
 
 						// Debugging: Log the structure of jsonYesterday
-						console.log('jsonYesterday:', JSON.stringify(jsonYesterday, null, 2));
+						//console.log('jsonYesterday:', JSON.stringify(jsonYesterday, null, 2));
 
 						// If the current hour is tomorrowDataTime or later, and urlTomorrow is "truthy" also fetch data from urlTomorrow 
 						let currentHour = new Date().getHours();
@@ -94,27 +94,28 @@ module.exports = NodeHelper.create({
 										console.error('Error parsing tomorrow\'s data:', e.message);
 										return;
 									}
-						
+
 									// Debugging: Log the structure of jsonTomorrow
-									console.log('jsonTomorrow:', JSON.stringify(jsonTomorrow, null, 2));
-						
+									//console.log('jsonTomorrow:', JSON.stringify(jsonTomorrow, null, 2));
+
 									// Fetch and combine all data
 									let combinedData = {
 										multiAreaEntries: [...jsonYesterday.multiAreaEntries, ...jsonToday.multiAreaEntries, ...jsonTomorrow.multiAreaEntries]
 									};
 
 									// Debugging: Log the combined data of today and yesterday
-									console.log('combinedData (today + yesterday):', JSON.stringify(combinedData, null, 2));
+									//console.log('combinedData (today + yesterday):', JSON.stringify(combinedData, null, 2));
 
 
 									// Process and send the combined data
+									console.log('Processing today, yesterday, and tomorrow\'s data');
 									this.processAndSendData(combinedData, payload);
 								});
 							}).on('error', (e) => {
 								console.error(`Got error: ${e.message}`);
 							});
 						} else {
-							console.log('Processing today\'s data only'); // Debugging
+							console.log('Processing today and yesterday\'s data only');
 							this.processAndSendData(combinedData, payload);
 						}
 					});
@@ -128,12 +129,13 @@ module.exports = NodeHelper.create({
 	},
 
 	processAndSendData(data, payload) {
-		    // Debugging: Log the data and payload
-			console.log('processAndSendData called with data:', JSON.stringify(data, null, 2));
-			console.log('processAndSendData called with payload:', payload);
-			console.log('Number of entries in data.multiAreaEntries:', data.multiAreaEntries.length);
+		// Debugging: Log the data and payload
 
-			
+		/*console.log('processAndSendData called with data:', JSON.stringify(data, null, 2));
+		console.log('processAndSendData called with payload:', payload);
+		console.log('Number of entries in data.multiAreaEntries:', data.multiAreaEntries.length);*/
+
+
 		let ret = this.parsePriceData(data, payload);
 		if (ret === false) {
 			this.sendSocketNotification('PRICEDATAERROR', 'ret = false');
@@ -159,7 +161,7 @@ module.exports = NodeHelper.create({
 		let ret = [];
 
 		if (payload.validDataSources.includes(payload.dataSource)) {
-			console.log('Valid data source', payload.dataSource); // Debugging
+			//console.log('Valid data source', payload.dataSource); // Debugging
 			if (!data) {
 				return { error: "Data is missing." };
 			}
@@ -173,7 +175,7 @@ module.exports = NodeHelper.create({
 			if (!payload.priceOffset) {
 				payload.priceOffset = 0;
 			} else {
-			payload.priceOffset = payload.priceOffset * 1000;
+				payload.priceOffset = payload.priceOffset * 1000;
 			}
 			if (!payload.priceMultiplier) {
 				payload.priceMultiplier = 1;
@@ -201,7 +203,7 @@ module.exports = NodeHelper.create({
 						time: offsetTime,
 						value: price
 					};
-					ret.push(retRow); // Change from unshift to push to maintain ascending order
+					ret.unshift(retRow);
 				}
 			}
 		} else {
