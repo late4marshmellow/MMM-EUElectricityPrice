@@ -59,7 +59,8 @@ Module.register("MMM-EUElectricityPrice", {
 		borderWidthBar: 1, //integer, 1-10 (1 is thin, 10 is thick) sets the thickness of the bar chart
 		//Other
 		tickInterval: false,
-		updateUIInterval: 5 * 60 // #(minute) * 60
+		updateUIInterval: 5 * 60, // #(minute) * 60
+		yDecimals: 2 //integer, 0-2, sets the number of decimals on the y-axis
 	},
 
 	getScripts: function () {
@@ -385,7 +386,10 @@ Module.register("MMM-EUElectricityPrice", {
 							grid: gridConfig,
 							beginAtZero: this.config.beginAtZero,
 							ticks: {
-								color: this.config.labelColor
+								color: this.config.labelColor,
+								callback: function(value, index, values) {
+									return value.toFixed(self.config.yDecimals); // Format y-axis labels to two decimal places
+								}								
 							}
 						},
 						x: {
