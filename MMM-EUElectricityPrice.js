@@ -14,6 +14,7 @@ Module.register("MMM-EUElectricityPrice", {
 		currency: 'NOK', // NOK, SEK, DKK, PLN, EUR
 		centName: 'øre', //e.g "øre" or "cents"
 		headText: 'Electricity Price', //string, header text
+		customText: '', //string, custom text
 		showCurrency: true, //boolean, true or false, if true currency is shown after the headText
 		tomorrowDataTime: 13, //integrer, time, HH (24H) when data should be available nextday. Default for CET/CEST is 13
 		tomorrowDataTimeMinute: 1, //integrer, default should be 1
@@ -446,7 +447,8 @@ let todaysAverage = (this.priceMetadata['average'] / 1000).toFixed(2);
 infoDiv.innerHTML = `
 	<div style="@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap'); font-family: 'Roboto', sans-serif;">
 	<span style="font-size: 1.2em; font-weight: bold;">${this.config.headText} ${this.config.showCurrency ? this.config.currency : ''}</span><br>
-	<span style="font-size: 0.8em;">Now: </span>
+		${this.config.customText ? `<span style="font-size: 0.6em;">${this.config.customText}</span><br>` : ''}
+		<span style="font-size: 0.8em;">Now: </span>
 		<span style="font-size: 1.2em; font-weight: bold;">${currentValue}</span>
 		<span style="font-size: 0.8em;"> ${this.config.centName}/kWh</span>
 		<br>
