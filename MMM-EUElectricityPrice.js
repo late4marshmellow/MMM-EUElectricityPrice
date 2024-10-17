@@ -1,7 +1,7 @@
 /* Magic Mirror
  * Module: MMM-EUElectricityPrice
  *
- * By JanneKalliola (MMM-FiElectricityPrice), Forked By late4marshmellow
+ * By late4marshmellow a fork from JanneKalliola (MMM-FiElectricityPrice)
  *
  */
 
@@ -102,14 +102,21 @@ Module.register("MMM-EUElectricityPrice", {
 
 	getPriceData: function () {
 		console.log('getPriceData');
-		let url;
-		let urlTomorrow;
 		let currency = this.config.currency;
+
+		let urlToday;
+		let urlTomorrow;
+		let urlYesterday;
+
 		let today = new Date();
 		let formattedToday = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
 
-		let tomorrow = new Date();
-		tomorrow.setDate(today.getDate() + 1);
+		let yesterday = new Date(today);
+		yesterday.setDate(today.getDate() - 1);
+		let formattedYesterday = `${yesterday.getFullYear()}-${yesterday.getMonth() + 1}-${yesterday.getDate()}`;
+		
+		let tomorrow = new Date(today);
+		tomorrow.setDate(today.getDate() + 1);		
 		let formattedTomorrow = `${tomorrow.getFullYear()}-${tomorrow.getMonth() + 1}-${tomorrow.getDate()}`;
 
 		if (!this.validCurrencies.includes(this.config.currency)) {
@@ -125,16 +132,22 @@ Module.register("MMM-EUElectricityPrice", {
 			this.setError(errorMessage);
 			return;
 		} else {
-			url = `https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?market=DayAhead&date=${formattedToday}&currency=${currency}&deliveryArea=${this.config.dataSource}`;
+			urlYesterday = `https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?market=DayAhead&date=${formattedYesterday}&currency=${currency}&deliveryArea=${this.config.dataSource}`;
+			urlToday = `https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?market=DayAhead&date=${formattedToday}&currency=${currency}&deliveryArea=${this.config.dataSource}`;
 			urlTomorrow = `https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?market=DayAhead&date=${formattedTomorrow}&currency=${currency}&deliveryArea=${this.config.dataSource}`;
 		} 
-		console.log("passing on ", url)
+		console.log("passing on ", urlToday)
+		if (urlYesterday) {
+			console.log("passing on ", urlYesterday)
+		}
+
 		if (urlTomorrow) {
 			console.log("passing on ", urlTomorrow)
 		}
 		this.sendSocketNotification('GET_PRICEDATA', {
-			url: url,
+			urlToday: urlToday,
 			urlTomorrow: urlTomorrow,
+			urlYesterday: urlYesterday,
 			tomorrowDataTime: this.config.tomorrowDataTime,
 			hourOffset: this.config.hourOffset,
 			priceOffset: this.config.priceOffset,

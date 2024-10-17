@@ -1,7 +1,7 @@
 /* Magic Mirror
- * Module: MMM-FiElectricityPrice
+ * Module: MMM-EUElectricityPrice
  *
- * By JanneKalliola (MMM-FiElectricityPrice), Forked by late4marshmellow
+ * By late4marshmellow a fork from JanneKalliola (MMM-FiElectricityPrice)
  *
  */
 const NodeHelper = require('node_helper');
@@ -33,44 +33,94 @@ module.exports = NodeHelper.create({
 		console.log('getpricedata');
 
 		// Fetch data for today
-		https.get(payload.url, (res) => {
-			let body = '';
+		https.get(payload.urlToday, (resToday) => {
+			let bodyToday = '';
 
-			res.on('data', (chunk) => {
-				body += chunk;
+			resToday.on('data', (chunk) => {
+				bodyToday += chunk;
 			});
 
-			res.on('end', () => {
-				let jsonToday = JSON.parse(body);
-
-				// If the current hour is tomorrowDataTime or later, and urlTomorrow is "truthy" also fetch data from urlTomorrow 
-				let currentHour = new Date().getHours();
-				if (currentHour >= payload.tomorrowDataTime && payload.urlTomorrow) {
-					https.get(payload.urlTomorrow, (resTomorrow) => {
-						let bodyTomorrow = '';
-
-						resTomorrow.on('data', (chunk) => {
-							bodyTomorrow += chunk;
-						});
-
-						resTomorrow.on('end', () => {
-							let jsonTomorrow = JSON.parse(bodyTomorrow);
-
-							// Combine jsonToday and jsonTomorrow
-							let combinedData = {
-								data: {
-									multiAreaEntries: [...jsonToday.data.multiAreaEntries, ...jsonTomorrow.data.multiAreaEntries]
-								}
-							};
-
-							this.processAndSendData(combinedData, payload);
-						});
-					}).on('error', (e) => {
-						console.error(`Got error: ${e.message}`);
-					});
-				} else {
-					this.processAndSendData(jsonToday, payload);
+			resToday.on('end', () => {
+				let jsonToday;
+				try {
+					jsonToday = JSON.parse(bodyToday);
+				} catch (e) {
+					console.error('Error parsing today\'s data:', e.message);
+					return;
 				}
+
+				// Debugging: Log the structure of jsonToday
+				console.log('jsonToday:', JSON.stringify(jsonToday, null, 2));
+				
+				// Fetch data for yesterday	
+				https.get(payload.urlYesterday, (resYesterday) => {
+					let bodyYesterday = '';
+
+					resYesterday.on('data', (chunk) => {
+						bodyYesterday += chunk;
+					});
+
+					resYesterday.on('end', () => {
+						let jsonYesterday;
+						try {
+							jsonYesterday = JSON.parse(bodyYesterday);
+						} catch (e) {
+							console.error('Error parsing tomorrow\'s data:', e.message);
+							return;
+						}
+									// Fetch and combine today's and yesterday's data
+									let combinedData = {
+										multiAreaEntries: [...jsonYesterday.multiAreaEntries, ...jsonToday.multiAreaEntries]
+									};
+
+						// Debugging: Log the structure of jsonYesterday
+						console.log('jsonYesterday:', JSON.stringify(jsonYesterday, null, 2));
+
+						// If the current hour is tomorrowDataTime or later, and urlTomorrow is "truthy" also fetch data from urlTomorrow 
+						let currentHour = new Date().getHours();
+						if (currentHour >= payload.tomorrowDataTime && payload.urlTomorrow) {
+							https.get(payload.urlTomorrow, (resTomorrow) => {
+								let bodyTomorrow = '';
+
+								resTomorrow.on('data', (chunk) => {
+									bodyTomorrow += chunk;
+								});
+
+								resTomorrow.on('end', () => {
+									let jsonTomorrow;
+									try {
+										jsonTomorrow = JSON.parse(bodyTomorrow);
+									} catch (e) {
+										console.error('Error parsing tomorrow\'s data:', e.message);
+										return;
+									}
+						
+									// Debugging: Log the structure of jsonTomorrow
+									console.log('jsonTomorrow:', JSON.stringify(jsonTomorrow, null, 2));
+						
+									// Fetch and combine all data
+									let combinedData = {
+										multiAreaEntries: [...jsonYesterday.multiAreaEntries, ...jsonToday.multiAreaEntries, ...jsonTomorrow.multiAreaEntries]
+									};
+
+									// Debugging: Log the combined data of today and yesterday
+									console.log('combinedData (today + yesterday):', JSON.stringify(combinedData, null, 2));
+
+
+									// Process and send the combined data
+									this.processAndSendData(combinedData, payload);
+								});
+							}).on('error', (e) => {
+								console.error(`Got error: ${e.message}`);
+							});
+						} else {
+							console.log('Processing today\'s data only'); // Debugging
+							this.processAndSendData(combinedData, payload);
+						}
+					});
+				}).on('error', (e) => {
+					console.error(`Got error: ${e.message}`);
+				});
 			});
 		}).on('error', (e) => {
 			console.error(`Got error: ${e.message}`);
@@ -78,6 +128,12 @@ module.exports = NodeHelper.create({
 	},
 
 	processAndSendData(data, payload) {
+		    // Debugging: Log the data and payload
+			console.log('processAndSendData called with data:', JSON.stringify(data, null, 2));
+			console.log('processAndSendData called with payload:', payload);
+			console.log('Number of entries in data.multiAreaEntries:', data.multiAreaEntries.length);
+
+			
 		let ret = this.parsePriceData(data, payload);
 		if (ret === false) {
 			this.sendSocketNotification('PRICEDATAERROR', 'ret = false');
@@ -103,7 +159,7 @@ module.exports = NodeHelper.create({
 		let ret = [];
 
 		if (payload.validDataSources.includes(payload.dataSource)) {
-			console.log(payload.dataSource, ' dataparse');
+			console.log('Valid data source', payload.dataSource); // Debugging
 			if (!data) {
 				return { error: "Data is missing." };
 			}
@@ -154,42 +210,4 @@ module.exports = NodeHelper.create({
 		return ret;
 	},
 
-	processData: function(response, payload) {
-		let ret = [];
-		let data = response.data;
-
-		if (data && data.multiAreaEntries) {
-			// Merge today's and tomorrow's data
-			let mergedEntries = data.multiAreaEntries;
-
-			// Iterate over the merged entries
-			for (let entry of mergedEntries) {
-				// Fetch the price for the specified area (e.g., NO1)
-				let areaData = entry.entryPerArea[payload.dataSource];
-				if (areaData) {
-					// Calculate the price with multiplier and offset
-					let price = (areaData * payload.priceMultiplier) + payload.priceOffset;
-
-					// Offset the hours to match the local time
-					let dt = new Date(entry.deliveryStart);
-					dt.setTime(dt.getTime() + payload.hourOffset * 60 * 60 * 1000);
-
-					// Format the date and time
-					let offsetDate = `${dt.getFullYear()}-${("0" + (dt.getMonth() + 1)).slice(-2)}-${("0" + dt.getDate()).slice(-2)}`;
-					let offsetTime = `${("0" + dt.getHours()).slice(-2)}:00:00`;
-
-					// Construct the result row
-					let retRow = {
-						date: offsetDate,
-						time: offsetTime,
-						value: price
-					};
-					ret.push(retRow); // Change from push to unshift to maintain descending order
-				}
-			}
-		} else {
-			return { error: "Invalid data source." };
-		}
-		return ret;
-	}
 });
