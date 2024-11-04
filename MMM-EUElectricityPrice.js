@@ -61,7 +61,7 @@ Module.register("MMM-EUElectricityPrice", {
 		//bar chart only
 		borderWidthBar: 1, //integer, 1-10 (1 is thin, 10 is thick) sets the thickness of the bar chart
 		//Other
-		tickInterval: false,
+		tickInterval: false, //integer, 1-24, sets the interval of the x-axis ticks, e.g 2 shows every second hour
 		updateUIInterval: 5 * 60, // #(minute) * 60
 		yDecimals: 2 //integer, 0-2, sets the number of decimals on the y-axis
 	},
@@ -341,7 +341,7 @@ Module.register("MMM-EUElectricityPrice", {
 			var canvas = document.createElement('canvas');
 
 			let averageSet = {};
-			if (this.config.showAverage) {
+			/*if (this.config.showAverage) {
 				averageSet = {
 					type: 'line',
 					label: 'Average',
@@ -353,6 +353,29 @@ Module.register("MMM-EUElectricityPrice", {
 					datalabels: {
 						display: false
 					}
+				};
+			}*/
+
+			// Calculate average based on displayed data
+			if (this.config.showAverage) {
+				const displayedData = showData.slice(-this.config.displayedDataCount); // Adjust as needed
+				const sum = displayedData.reduce((acc, val) => acc + val, 0);
+				const average = sum / displayedData.length;
+			
+				averageSet = {
+					type: 'line',
+					label: 'Average',
+					data: Array(displayedData.length).fill(average),
+					borderColor: this.config.averageColor,
+					fill: false,
+					color: this.config.averageColor,
+					borderColor: this.config.averageColor,
+					pointRadius: 0,
+					order: 1,
+					datalabels: {
+						display: false
+					}
+
 				};
 			}
 
@@ -449,7 +472,8 @@ let lowestValuePast24H = (Math.min(...past24HoursData.map(item => item.value)) /
 let highestValuePast24H = (Math.max(...past24HoursData.map(item => item.value)) / 1000).toFixed(2);
 
 // Today's Average
-let todaysAverage = (this.priceMetadata['average'] / 1000).toFixed(2);
+//let todaysAverage = (this.priceMetadata['average'] / 1000).toFixed(2);
+const todaysAverage = (Number(lowestValuePast24H) + Number(highestValuePast24H)) / 2;
 
     // Creating DOM Elements for Display
     var infoDiv = document.createElement("div");
@@ -468,7 +492,7 @@ infoDiv.innerHTML = `
 			<span style="color: #aaa;">&nbsp;&bull;&nbsp;</span> 
 			<span style="color: red;">&uarr;</span> ${highestValuePast24H} ${this.config.centName} 
 			<span style="color: #aaa;">&nbsp;&bull;&nbsp;</span> 
-			≈ ${todaysAverage} ${this.config.centName}
+			≈ ${todaysAverage.toFixed(2)} ${this.config.centName}
 		</span>
 	</div>
 `;
