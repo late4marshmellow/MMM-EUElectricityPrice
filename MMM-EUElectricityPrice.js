@@ -473,7 +473,11 @@ let highestValuePast24H = (Math.max(...past24HoursData.map(item => item.value)) 
 
 // Today's Average
 //let todaysAverage = (this.priceMetadata['average'] / 1000).toFixed(2);
-const todaysAverage = (Number(lowestValuePast24H) + Number(highestValuePast24H)) / 2;
+
+// Calculate Today's Average based on past24HoursData
+let sum = past24HoursData.reduce((acc, item) => acc + item.value, 0);
+let average = sum / past24HoursData.length;
+const todaysAverage = (average / 1000).toFixed(2);
 
     // Creating DOM Elements for Display
     var infoDiv = document.createElement("div");
@@ -492,7 +496,7 @@ infoDiv.innerHTML = `
 			<span style="color: #aaa;">&nbsp;&bull;&nbsp;</span> 
 			<span style="color: red;">&uarr;</span> ${highestValuePast24H} ${this.config.centName} 
 			<span style="color: #aaa;">&nbsp;&bull;&nbsp;</span> 
-			≈ ${todaysAverage.toFixed(2)} ${this.config.centName}
+			≈ ${todaysAverage} ${this.config.centName}
 		</span>
 	</div>
 `;
