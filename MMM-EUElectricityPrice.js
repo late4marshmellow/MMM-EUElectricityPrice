@@ -250,13 +250,23 @@ Module.register("MMM-EUElectricityPrice", {
 
 			let futureMark = 0;
 			let pastMark = this.priceData.length - 1;
+			
+			// Calculate futureMark
 			if (this.config.showFutureHours !== false) {
 				futureMark = Math.max(currentHourMark - this.config.showFutureHours, 0);
 			}
-			if (this.config.showPastHours !== false) {
-				pastMark = Math.min(currentHourMark + this.config.showPastHours, this.priceData.length - 1);
+			
+			// Calculate showPastHours dynamically if null
+			let showPastHours = this.config.showPastHours;
+			if (showPastHours === null) {
+				showPastHours = this.config.totalHours - (currentHourMark - futureMark);
+				showPastHours = Math.max(showPastHours, 0); // Ensure it's not negative
 			}
-
+			
+			if (showPastHours !== false) {
+				pastMark = Math.min(currentHourMark + showPastHours, this.priceData.length - 1);
+			}
+			
 			let showData = [];
 			let showAverage = [];
 			let showLabel = [];
