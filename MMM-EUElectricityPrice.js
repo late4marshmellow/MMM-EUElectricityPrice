@@ -20,8 +20,9 @@ Module.register("MMM-EUElectricityPrice", {
 		tomorrowDataTimeMinute: 1, //integrer, default should be 1
 		errorMessage: 'Data could not be fetched.',
 		loadingMessage: 'Loading data...',
-		showPastHours: 24,
-		showFutureHours: 36,
+		showPastHours: 24, //integer, how many hours to show in the past, e.g 24
+		showFutureHours: 36, //integer, how many hours to show in the future, e.g 36
+		totalHours: 40, //integer, total hours to show, e.g 40 -  does not apply if showPastHours are set
 		hourOffset: 1,
 		priceOffset: 0, // any extra costs added. in e.g 7 cents its written as 7, 0.07 is 7 cents
 		priceMultiplier: 1, //add tax, (always minimum 1,  1 is 0% 1,25 is 25%)
@@ -266,7 +267,7 @@ Module.register("MMM-EUElectricityPrice", {
 			if (showPastHours !== false) {
 				pastMark = Math.min(currentHourMark + showPastHours, this.priceData.length - 1);
 			}
-			
+
 			let showData = [];
 			let showAverage = [];
 			let showLabel = [];
