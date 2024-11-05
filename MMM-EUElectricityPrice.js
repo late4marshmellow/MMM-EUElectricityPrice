@@ -20,8 +20,9 @@ Module.register("MMM-EUElectricityPrice", {
 		tomorrowDataTimeMinute: 1, //integrer, default should be 1
 		errorMessage: 'Data could not be fetched.',
 		loadingMessage: 'Loading data...',
-		showPastHours: 24,
-		showFutureHours: 36,
+		showPastHours: 24, //integer, how many hours to show in the past, e.g 24
+		showFutureHours: 36, //integer, how many hours to show in the future, e.g 36
+		totalHours: 40, //integer, total hours to show, e.g 40 -  does not apply if showPastHours are set
 		hourOffset: 1,
 		priceOffset: 0, // any extra costs added. in e.g 7 cents its written as 7, 0.07 is 7 cents
 		priceMultiplier: 1, //add tax, (always minimum 1,  1 is 0% 1,25 is 25%)
@@ -60,7 +61,7 @@ Module.register("MMM-EUElectricityPrice", {
 		//bar chart only
 		borderWidthBar: 1, //integer, 1-10 (1 is thin, 10 is thick) sets the thickness of the bar chart
 		//Other
-		tickInterval: false,
+		tickInterval: false, //integer, 1-24, sets the interval of the x-axis ticks, e.g 2 shows every second hour
 		updateUIInterval: 5 * 60, // #(minute) * 60
 		yDecimals: 2 //integer, 0-2, sets the number of decimals on the y-axis
 	},
@@ -250,11 +251,21 @@ Module.register("MMM-EUElectricityPrice", {
 
 			let futureMark = 0;
 			let pastMark = this.priceData.length - 1;
+			
+			// Calculate futureMark
 			if (this.config.showFutureHours !== false) {
 				futureMark = Math.max(currentHourMark - this.config.showFutureHours, 0);
 			}
-			if (this.config.showPastHours !== false) {
-				pastMark = Math.min(currentHourMark + this.config.showPastHours, this.priceData.length - 1);
+			
+			// Calculate showPastHours dynamically if null
+			let showPastHours = this.config.showPastHours;
+			if (showPastHours === null) {
+				showPastHours = this.config.totalHours - (currentHourMark - futureMark);
+				showPastHours = Math.max(showPastHours, 0); // Ensure it's not negative
+			}
+			
+			if (showPastHours !== false) {
+				pastMark = Math.min(currentHourMark + showPastHours, this.priceData.length - 1);
 			}
 
 			let showData = [];
@@ -330,7 +341,7 @@ Module.register("MMM-EUElectricityPrice", {
 			var canvas = document.createElement('canvas');
 
 			let averageSet = {};
-			if (this.config.showAverage) {
+			/*if (this.config.showAverage) {
 				averageSet = {
 					type: 'line',
 					label: 'Average',
@@ -342,6 +353,29 @@ Module.register("MMM-EUElectricityPrice", {
 					datalabels: {
 						display: false
 					}
+				};
+			}*/
+
+			// Calculate average based on displayed data
+			if (this.config.showAverage) {
+				const displayedData = showData.slice(-this.config.displayedDataCount); // Adjust as needed
+				const sum = displayedData.reduce((acc, val) => acc + val, 0);
+				const average = sum / displayedData.length;
+			
+				averageSet = {
+					type: 'line',
+					label: 'Average',
+					data: Array(displayedData.length).fill(average),
+					borderColor: this.config.averageColor,
+					fill: false,
+					color: this.config.averageColor,
+					borderColor: this.config.averageColor,
+					pointRadius: 0,
+					order: 1,
+					datalabels: {
+						display: false
+					}
+
 				};
 			}
 
@@ -438,7 +472,12 @@ let lowestValuePast24H = (Math.min(...past24HoursData.map(item => item.value)) /
 let highestValuePast24H = (Math.max(...past24HoursData.map(item => item.value)) / 1000).toFixed(2);
 
 // Today's Average
-let todaysAverage = (this.priceMetadata['average'] / 1000).toFixed(2);
+//let todaysAverage = (this.priceMetadata['average'] / 1000).toFixed(2);
+
+// Calculate Today's Average based on past24HoursData
+let sum = past24HoursData.reduce((acc, item) => acc + item.value, 0);
+let average = sum / past24HoursData.length;
+const todaysAverage = (average / 1000).toFixed(2);
 
     // Creating DOM Elements for Display
     var infoDiv = document.createElement("div");
