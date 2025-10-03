@@ -195,7 +195,7 @@ module.exports = NodeHelper.create({
 
 					// Format the date and time
 					let offsetDate = `${dt.getFullYear()}-${("0" + (dt.getMonth() + 1)).slice(-2)}-${("0" + dt.getDate()).slice(-2)}`;
-					let offsetTime = `${("0" + dt.getHours()).slice(-2)}:00:00`;
+					let offsetTime = `${("0" + dt.getHours()).slice(-2)}:${("0" + dt.getMinutes()).slice(-2)}:00`;
 
 					// Construct the result row
 					let retRow = {
