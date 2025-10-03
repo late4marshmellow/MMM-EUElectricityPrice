@@ -225,13 +225,16 @@ Module.register("MMM-EUElectricityPrice", {
 
 		if (this.priceData) {
 			let now = new Date();
-			let currentTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), 0, 0, 0);
+
+			// round down to nearest 15-minute 
+			let minutes = Math.floor(now.getMinutes() / 15) * 15;
+			let currentSlot = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), minutes, 0, 0); 0, 0);
 
 			// Change time to get local time from toISOString()
-			currentTime = new Date(currentTime - currentTime.getTimezoneOffset() * 60000).toISOString();
+			let localIso = new Date(currentSlot - currentSlot.getTimezoneOffset() * 60000).toISOString();
 
-			let currentDate = currentTime.substring(0, 10);
-			currentTime = currentTime.substring(11, 19);
+			let currentDate = localIso.substring(0, 10);
+			let currentTime = localIso.substring(11, 19); // "HH:MM:SS"
 
 			let currentHourMark = false;
 			for (let i = 0; i < this.priceData.length; i++) {
