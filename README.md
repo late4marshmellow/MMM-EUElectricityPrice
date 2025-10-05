@@ -202,6 +202,11 @@ The module has the following configuration options:
 	  <td><code>300</code></td>
       <td>The interval, in seconds, to update the UI. Updating the UI does not fetch the data from the network again, it just draws the UI to change the current hour.</td>
     </tr>
+	<tr>
+      <td><code>resolution</code></td>
+	  <td><code>hour</code></td>
+      <td>Chart data pr. hour or quarter.</td>
+    </tr>
   </tbody>
 </table>
 
