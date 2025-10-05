@@ -202,6 +202,11 @@ The module has the following configuration options:
 	  <td><code>300</code></td>
       <td>The interval, in seconds, to update the UI. Updating the UI does not fetch the data from the network again, it just draws the UI to change the current hour.</td>
     </tr>
+	<tr>
+      <td><code>resolution</code></td>
+	  <td><code>hour</code></td>
+      <td>Chart data pr. hour or quarter.</td>
+    </tr>
   </tbody>
 </table>
 
@@ -210,3 +215,6 @@ The module has the following configuration options:
 **2024-10-16** Updated to fit new Nordpool API, error message on screen when wrong datasource or currency is entered.
 
 **2022-09-04** Initial version
+
+**2025-10-05** Updatetd to fit new 15-min intervall, updated chart.js to v4 for new installs, fallback to v3 for pull requests
+added a switch between quarter and hourly pricing on chart. 

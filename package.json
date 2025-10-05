@@ -1,11 +1,11 @@
 {
-    "name": "mmm-euelectricityprice",
-    "version": "0.0.1",
-    "description": "EU Electricity price chart",
-    "main": "MMM-euelectricityprice.js",
-    "author": "Janne Kalliola",
-    "license": "MIT",
-    "dependencies": {
-        "chart.js": "3.9.x"
-    }
+  "name": "mmm-euelectricityprice",
+  "version": "1.0.0",
+  "description": "EU Electricity price chart",
+  "main": "MMM-EUElectricityPrice.js",
+  "author": "Janne Kalliola, late4marshmellow",
+  "license": "MIT",
+  "dependencies": {
+    "chart.js": "^4"
+  }
 }
