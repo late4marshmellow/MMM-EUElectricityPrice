@@ -210,3 +210,6 @@ The module has the following configuration options:
 **2024-10-16** Updated to fit new Nordpool API, error message on screen when wrong datasource or currency is entered.
 
 **2022-09-04** Initial version
+
+**2025-10-05** Updatetd to fit new 15-min intervall, updated chart.js to v4 for new installs, fallback to v3 for pull requests
+added a switch between quarter and hourly pricing on chart. 

@@ -7,6 +7,44 @@
 const NodeHelper = require('node_helper');
 const https = require('https');
 
+const DEFAULT_TIMEOUT_MS = 8000;
+
+function getJsonWithRetry(url, retries = 2, timeoutMs = DEFAULT_TIMEOUT_MS) {
+  return new Promise((resolve, reject) => {
+    const attempt = (n) => {
+      const req = https.get(url, (res) => {
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          res.resume(); // drain
+          return n > 0
+            ? setTimeout(() => attempt(n - 1), 500 * (retries - n + 1))
+            : reject(new Error(`HTTP ${res.statusCode} for ${url}`));
+        }
+        let body = '';
+        res.setEncoding('utf8');
+        res.on('data', (c) => (body += c));
+        res.on('end', () => {
+          try { resolve(JSON.parse(body)); }
+          catch (e) {
+            return n > 0
+              ? setTimeout(() => attempt(n - 1), 500 * (retries - n + 1))
+              : reject(new Error(`JSON parse error for ${url}: ${e.message}`));
+          }
+        });
+      });
+      req.on('error', (e) => {
+        return n > 0
+          ? setTimeout(() => attempt(n - 1), 500 * (retries - n + 1))
+          : reject(e);
+      });
+      req.setTimeout(timeoutMs, () => {
+        req.destroy(new Error(`Timeout after ${timeoutMs}ms for ${url}`));
+      });
+    };
+    attempt(retries);
+  });
+}
+
+
 module.exports = NodeHelper.create({
 
 
@@ -29,120 +67,60 @@ module.exports = NodeHelper.create({
 	 * @return {Object} The parsed price data or false, if an error occurred.
 	 */
 
-	getPriceData(payload) {
-		console.log('getpricedata');
+async getPriceData(payload) {
+  console.log('getpricedata');
+  try {
+    // Always fetch today + yesterday (in parallel)
+    const [jsonToday, jsonYesterday] = await Promise.all([
+      getJsonWithRetry(payload.urlToday,  2, DEFAULT_TIMEOUT_MS),
+      getJsonWithRetry(payload.urlYesterday, 2, DEFAULT_TIMEOUT_MS)
+    ]);
 
-		// Fetch data for today
-		https.get(payload.urlToday, (resToday) => {
-			let bodyToday = '';
+    // Combine safely even if a field is missing
+    let combinedData = {
+      multiAreaEntries: [
+        ...((jsonYesterday && jsonYesterday.multiAreaEntries) || []),
+        ...((jsonToday && jsonToday.multiAreaEntries) || [])
+      ]
+    };
 
-			resToday.on('data', (chunk) => {
-				bodyToday += chunk;
-			});
+    // After publish time, try tomorrow as well; proceed even if it fails
+    const now = new Date();
+    if (now.getHours() >= payload.tomorrowDataTime && payload.urlTomorrow) {
+      try {
+        const jsonTomorrow = await getJsonWithRetry(payload.urlTomorrow, 2, DEFAULT_TIMEOUT_MS);
+        combinedData.multiAreaEntries.push(
+          ...((jsonTomorrow && jsonTomorrow.multiAreaEntries) || [])
+        );
+      } catch (e) {
+        console.warn('Tomorrow fetch failed (continuing without it):', e.message);
+      }
+    }
 
-			resToday.on('end', () => {
-				let jsonToday;
-				try {
-					jsonToday = JSON.parse(bodyToday);
-				} catch (e) {
-					console.error('Error parsing today\'s data:', e.message);
-					return;
-				}
-
-				// Debugging: Log the structure of jsonToday
-				//console.log('jsonToday:', JSON.stringify(jsonToday, null, 2));
-
-				// Fetch data for yesterday	
-				https.get(payload.urlYesterday, (resYesterday) => {
-					let bodyYesterday = '';
-
-					resYesterday.on('data', (chunk) => {
-						bodyYesterday += chunk;
-					});
-
-					resYesterday.on('end', () => {
-						let jsonYesterday;
-						try {
-							jsonYesterday = JSON.parse(bodyYesterday);
-						} catch (e) {
-							console.error('Error parsing tomorrow\'s data:', e.message);
-							return;
-						}
-						// Fetch and combine today's and yesterday's data
-						let combinedData = {
-							multiAreaEntries: [...jsonYesterday.multiAreaEntries, ...jsonToday.multiAreaEntries]
-						};
-
-						// Debugging: Log the structure of jsonYesterday
-						//console.log('jsonYesterday:', JSON.stringify(jsonYesterday, null, 2));
-
-						// If the current hour is tomorrowDataTime or later, and urlTomorrow is "truthy" also fetch data from urlTomorrow 
-						let currentHour = new Date().getHours();
-						if (currentHour >= payload.tomorrowDataTime && payload.urlTomorrow) {
-							https.get(payload.urlTomorrow, (resTomorrow) => {
-								let bodyTomorrow = '';
-
-								resTomorrow.on('data', (chunk) => {
-									bodyTomorrow += chunk;
-								});
-
-								resTomorrow.on('end', () => {
-									let jsonTomorrow;
-									try {
-										jsonTomorrow = JSON.parse(bodyTomorrow);
-									} catch (e) {
-										console.error('Error parsing tomorrow\'s data:', e.message);
-										return;
-									}
-
-									// Debugging: Log the structure of jsonTomorrow
-									//console.log('jsonTomorrow:', JSON.stringify(jsonTomorrow, null, 2));
-
-									// Fetch and combine all data
-									let combinedData = {
-										multiAreaEntries: [...jsonYesterday.multiAreaEntries, ...jsonToday.multiAreaEntries, ...jsonTomorrow.multiAreaEntries]
-									};
-
-									// Debugging: Log the combined data of today and yesterday
-									//console.log('combinedData (today + yesterday):', JSON.stringify(combinedData, null, 2));
+    console.log(`Processing ${combinedData.multiAreaEntries.length} entries`);
+    this.processAndSendData(combinedData, payload);
+  } catch (e) {
+    console.error('Fetching price data failed:', e.message);
+    this.sendSocketNotification('PRICEDATAERROR', e.message);
+  }
+},
 
 
-									// Process and send the combined data
-									console.log('Processing today, yesterday, and tomorrow\'s data');
-									this.processAndSendData(combinedData, payload);
-								});
-							}).on('error', (e) => {
-								console.error(`Got error: ${e.message}`);
-							});
-						} else {
-							console.log('Processing today and yesterday\'s data only');
-							this.processAndSendData(combinedData, payload);
-						}
-					});
-				}).on('error', (e) => {
-					console.error(`Got error: ${e.message}`);
-				});
-			});
-		}).on('error', (e) => {
-			console.error(`Got error: ${e.message}`);
-		});
-	},
+processAndSendData(data, payload) {
+  // Guard against empty result
+  if (!data || !Array.isArray(data.multiAreaEntries) || data.multiAreaEntries.length === 0) {
+    this.sendSocketNotification('PRICEDATAERROR', 'No entries received from API');
+    return;
+  }
 
-	processAndSendData(data, payload) {
-		// Debugging: Log the data and payload
+  const ret = this.parsePriceData(data, payload);
+  if (ret === false || (Array.isArray(ret) && ret.length === 0)) {
+    this.sendSocketNotification('PRICEDATAERROR', 'Parsed dataset is empty');
+  } else {
+    this.sendSocketNotification('PRICEDATA', ret);
+  }
+},
 
-		/*console.log('processAndSendData called with data:', JSON.stringify(data, null, 2));
-		console.log('processAndSendData called with payload:', payload);
-		console.log('Number of entries in data.multiAreaEntries:', data.multiAreaEntries.length);*/
-
-
-		let ret = this.parsePriceData(data, payload);
-		if (ret === false) {
-			this.sendSocketNotification('PRICEDATAERROR', 'ret = false');
-		} else {
-			this.sendSocketNotification('PRICEDATA', ret);
-		}
-	},
 
 	/**
 	 * Parses the loaded price data to simplify processing on the front-end.
