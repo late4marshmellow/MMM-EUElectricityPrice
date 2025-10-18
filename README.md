@@ -51,7 +51,7 @@ The module has the following configuration options:
 <tr>
   <td><code>dataSource</code></td>
   <td><code>NO1</code></td>
-  <td>Nord Pool delivery area (one of: <code>EE</code>, <code>LT</code>, <code>LV</code>, <code>AT</code>, <code>BE</code>, <code>FR</code>, <code>GER</code>, <code>NL</code>, <code>PL</code>, <code>DK1</code>, <code>DK2</code>, <code>FI</code>, <code>NO1</code>–<code>NO5</code>, <code>SE1</code>–<code>SE4</code>, <code>SYS</code>). The module validates this value and shows an error if it’s not allowed.</td>
+  <td>Nord Pool delivery area (one of: <code>EE</code>, <code>LT</code>, <code>LV</code>, <code>AT</code>, <code>BE</code>, <code>FR</code>, <code>DE</code>, <code>NL</code>, <code>PL</code>, <code>DK1</code>, <code>DK2</code>, <code>FI</code>, <code>NO1</code>–<code>NO5</code>, <code>SE1</code>–<code>SE4</code>, <code>SYS</code>). The module validates this value and shows an error if it’s not allowed.</td>
 </tr>
 
 <tr>

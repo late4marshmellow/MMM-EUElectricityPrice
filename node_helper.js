@@ -138,56 +138,49 @@ module.exports = NodeHelper.create({
 		console.log('Start dataparse');
 		let ret = [];
 
-		if (payload.validDataSources.includes(payload.dataSource)) {
-			//console.log('Valid data source', payload.dataSource); // Debugging
-			if (!data) {
-				return { error: "Data is missing." };
-			}
-
-			if (!data.multiAreaEntries) {
-				return { error: "multiAreaEntries is missing." };
-			}
-			if (!payload.hourOffset) {
-				payload.hourOffset = 0;
-			}
-			if (!payload.priceOffset) {
-				payload.priceOffset = 0;
-			} else {
-				payload.priceOffset = payload.priceOffset * 1000;
-			}
-			if (!payload.priceMultiplier) {
-				payload.priceMultiplier = 1;
-			}
-
-			// Loop through each entry in the multiAreaEntries
-			for (let entry of data.multiAreaEntries) {
-				// Fetch the price for the specified area (e.g., NO1)
-				let areaData = entry.entryPerArea[payload.dataSource];
-				if (areaData) {
-					// Calculate the price with multiplier and offset
-					let price = (areaData * payload.priceMultiplier) + payload.priceOffset;
-
-					// Offset the hours to match the local time
-					let dt = new Date(entry.deliveryStart);
-					dt.setTime(dt.getTime() + payload.hourOffset * 60 * 60 * 1000);
-
-					// Format the date and time
-					let offsetDate = `${dt.getFullYear()}-${("0" + (dt.getMonth() + 1)).slice(-2)}-${("0" + dt.getDate()).slice(-2)}`;
-					let offsetTime = `${("0" + dt.getHours()).slice(-2)}:${("0" + dt.getMinutes()).slice(-2)}:00`;
-
-					// Construct the result row
-					let retRow = {
-						date: offsetDate,
-						time: offsetTime,
-						value: price
-					};
-					ret.unshift(retRow);
-				}
-			}
-		} else {
+		if (!payload.validDataSources.includes(payload.dataSource)) {
 			return { error: "Invalid data source." };
 		}
+		if (!data) return { error: "Data is missing." };
+		if (!data.multiAreaEntries) return { error: "multiAreaEntries is missing." };
+
+		// Normalize config
+		const hourOffset = (typeof payload.hourOffset === 'number') ? payload.hourOffset : 0;
+		const priceMultiplier = (typeof payload.priceMultiplier === 'number') ? payload.priceMultiplier : 1;
+		const priceOffset = (typeof payload.priceOffset === 'number') ? payload.priceOffset * 1000 : 0;
+
+		// Build rows
+		for (const entry of data.multiAreaEntries) {
+			const areaData = entry.entryPerArea?.[payload.dataSource];
+			if (typeof areaData !== 'number') continue;
+
+			// price = (value * multiplier) + offset
+			const price = (areaData * priceMultiplier) + priceOffset;
+
+			// deliveryStart is ISO from Nord Pool; treat it as UTC then add hourOffset
+			const dt = new Date(entry.deliveryStart);
+			dt.setTime(dt.getTime() + hourOffset * 60 * 60 * 1000);
+
+			const offsetDate = `${dt.getFullYear()}-${("0" + (dt.getMonth() + 1)).slice(-2)}-${("0" + dt.getDate()).slice(-2)}`;
+			const offsetTime = `${("0" + dt.getHours()).slice(-2)}:${("0" + dt.getMinutes()).slice(-2)}:00`;
+
+			ret.push({
+				date: offsetDate,
+				time: offsetTime,
+				value: price
+			});
+		}
+
+		// Ensure chronological order (earliest → latest)
+		// String sort on ISO-like "YYYY-MM-DD HH:MM:SS" is safe and fast
+		ret.sort((a, b) => {
+			const ka = `${a.date} ${a.time}`;
+			const kb = `${b.date} ${b.time}`;
+			return ka.localeCompare(kb);
+		});
+
 		return ret;
 	},
+
 
 });
