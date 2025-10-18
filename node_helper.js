@@ -10,38 +10,38 @@ const https = require('https');
 const DEFAULT_TIMEOUT_MS = 8000;
 
 function getJsonWithRetry(url, retries = 2, timeoutMs = DEFAULT_TIMEOUT_MS) {
-  return new Promise((resolve, reject) => {
-    const attempt = (n) => {
-      const req = https.get(url, (res) => {
-        if (res.statusCode < 200 || res.statusCode >= 300) {
-          res.resume(); // drain
-          return n > 0
-            ? setTimeout(() => attempt(n - 1), 500 * (retries - n + 1))
-            : reject(new Error(`HTTP ${res.statusCode} for ${url}`));
-        }
-        let body = '';
-        res.setEncoding('utf8');
-        res.on('data', (c) => (body += c));
-        res.on('end', () => {
-          try { resolve(JSON.parse(body)); }
-          catch (e) {
-            return n > 0
-              ? setTimeout(() => attempt(n - 1), 500 * (retries - n + 1))
-              : reject(new Error(`JSON parse error for ${url}: ${e.message}`));
-          }
-        });
-      });
-      req.on('error', (e) => {
-        return n > 0
-          ? setTimeout(() => attempt(n - 1), 500 * (retries - n + 1))
-          : reject(e);
-      });
-      req.setTimeout(timeoutMs, () => {
-        req.destroy(new Error(`Timeout after ${timeoutMs}ms for ${url}`));
-      });
-    };
-    attempt(retries);
-  });
+	return new Promise((resolve, reject) => {
+		const attempt = (n) => {
+			const req = https.get(url, (res) => {
+				if (res.statusCode < 200 || res.statusCode >= 300) {
+					res.resume(); // drain
+					return n > 0
+						? setTimeout(() => attempt(n - 1), 500 * (retries - n + 1))
+						: reject(new Error(`HTTP ${res.statusCode} for ${url}`));
+				}
+				let body = '';
+				res.setEncoding('utf8');
+				res.on('data', (c) => (body += c));
+				res.on('end', () => {
+					try { resolve(JSON.parse(body)); }
+					catch (e) {
+						return n > 0
+							? setTimeout(() => attempt(n - 1), 500 * (retries - n + 1))
+							: reject(new Error(`JSON parse error for ${url}: ${e.message}`));
+					}
+				});
+			});
+			req.on('error', (e) => {
+				return n > 0
+					? setTimeout(() => attempt(n - 1), 500 * (retries - n + 1))
+					: reject(e);
+			});
+			req.setTimeout(timeoutMs, () => {
+				req.destroy(new Error(`Timeout after ${timeoutMs}ms for ${url}`));
+			});
+		};
+		attempt(retries);
+	});
 }
 
 
@@ -67,59 +67,59 @@ module.exports = NodeHelper.create({
 	 * @return {Object} The parsed price data or false, if an error occurred.
 	 */
 
-async getPriceData(payload) {
-  console.log('getpricedata');
-  try {
-    // Always fetch today + yesterday (in parallel)
-    const [jsonToday, jsonYesterday] = await Promise.all([
-      getJsonWithRetry(payload.urlToday,  2, DEFAULT_TIMEOUT_MS),
-      getJsonWithRetry(payload.urlYesterday, 2, DEFAULT_TIMEOUT_MS)
-    ]);
+	async getPriceData(payload) {
+		console.log('getpricedata');
+		try {
+			// Always fetch today + yesterday (in parallel)
+			const [jsonToday, jsonYesterday] = await Promise.all([
+				getJsonWithRetry(payload.urlToday, 2, DEFAULT_TIMEOUT_MS),
+				getJsonWithRetry(payload.urlYesterday, 2, DEFAULT_TIMEOUT_MS)
+			]);
 
-    // Combine safely even if a field is missing
-    let combinedData = {
-      multiAreaEntries: [
-        ...((jsonYesterday && jsonYesterday.multiAreaEntries) || []),
-        ...((jsonToday && jsonToday.multiAreaEntries) || [])
-      ]
-    };
+			// Combine safely even if a field is missing
+			let combinedData = {
+				multiAreaEntries: [
+					...((jsonYesterday && jsonYesterday.multiAreaEntries) || []),
+					...((jsonToday && jsonToday.multiAreaEntries) || [])
+				]
+			};
 
-    // After publish time, try tomorrow as well; proceed even if it fails
-    const now = new Date();
-    if (now.getHours() >= payload.tomorrowDataTime && payload.urlTomorrow) {
-      try {
-        const jsonTomorrow = await getJsonWithRetry(payload.urlTomorrow, 2, DEFAULT_TIMEOUT_MS);
-        combinedData.multiAreaEntries.push(
-          ...((jsonTomorrow && jsonTomorrow.multiAreaEntries) || [])
-        );
-      } catch (e) {
-        console.warn('Tomorrow fetch failed (continuing without it):', e.message);
-      }
-    }
+			// After publish time, try tomorrow as well; proceed even if it fails
+			//const now = new Date();
+			//if (now.getHours() >= payload.tomorrowDataTime && payload.urlTomorrow) {
+			if (payload.urlTomorrow) {
+				try {
+					const jsonTomorrow = await getJsonWithRetry(payload.urlTomorrow, 2, DEFAULT_TIMEOUT_MS);
+					combinedData.multiAreaEntries.push(
+						...((jsonTomorrow && jsonTomorrow.multiAreaEntries) || [])
+					);
+				} catch (e) {
+					console.warn('Tomorrow fetch failed (continuing without it):', e.message);
+				}
+			}
 
-    console.log(`Processing ${combinedData.multiAreaEntries.length} entries`);
-    this.processAndSendData(combinedData, payload);
-  } catch (e) {
-    console.error('Fetching price data failed:', e.message);
-    this.sendSocketNotification('PRICEDATAERROR', e.message);
-  }
-},
+			console.log(`Processing ${combinedData.multiAreaEntries.length} entries`);
+			this.processAndSendData(combinedData, payload);
+		} catch (e) {
+			console.error('Fetching price data failed:', e.message);
+			this.sendSocketNotification('PRICEDATAERROR', e.message);
+		}
+	},
 
 
-processAndSendData(data, payload) {
-  // Guard against empty result
-  if (!data || !Array.isArray(data.multiAreaEntries) || data.multiAreaEntries.length === 0) {
-    this.sendSocketNotification('PRICEDATAERROR', 'No entries received from API');
-    return;
-  }
-
-  const ret = this.parsePriceData(data, payload);
-  if (ret === false || (Array.isArray(ret) && ret.length === 0)) {
-    this.sendSocketNotification('PRICEDATAERROR', 'Parsed dataset is empty');
-  } else {
-    this.sendSocketNotification('PRICEDATA', ret);
-  }
-},
+	processAndSendData(data, payload) {
+		const list = Array.isArray(data?.multiAreaEntries) ? data.multiAreaEntries : [];
+		if (list.length === 0) {
+			this.sendSocketNotification('PRICEDATAERROR', 'No entries received from API');
+			return;
+		}
+		const ret = this.parsePriceData({ multiAreaEntries: list }, payload);
+		if (!Array.isArray(ret) || ret.length === 0) {
+			this.sendSocketNotification('PRICEDATAERROR', 'Parsed dataset is empty');
+		} else {
+			this.sendSocketNotification('PRICEDATA', ret);
+		}
+	},
 
 
 	/**

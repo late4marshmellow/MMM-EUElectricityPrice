@@ -1,17 +1,10 @@
 # MMM-EUElectricityPrice
-### Breaking update! Oct. 15th 2024
-Because of changes in Nordpool API some existing users need to correct their datasource.
+🪄 Big thanks to **JanneKalliola** the original creator of this module. 
+This version expands support to multiple EU/EEA regions and adds extensive customization and visual improvements.
 
-Please check : https://data.nordpoolgroup.com/map?deliveryDate=latest&currency=EUR&market=DayAhead&mapDataType=Price&resolution=60
-for your updated code.
-
-Thank you JanneKalliola for creating this great module, in need for Norwegian data on my MagicMirror i've forked his work and added possiblity for EU data. 
-Magic Mirror Module to display EU electricity prices from Nord Pool.
-
-The module loads the electricity prices when started and then every day at time set with "tomorrowDataTime" default is 1pm local time of your MagicMirror installation. The prices are shown as a bar chart with optional average value and highlights for high and low prices, both limits are configurable.
-
-The module reads the data that is shown on this page: https://data.nordpoolgroup.com/auction/day-ahead/prices?deliveryDate=latest&currency=EUR&aggregation=Hourly&deliveryAreas=EE,LT,LV,AT,BE,FR,GER,NL,PL,DK1,DK2,FI,NO1,NO2,NO3,NO4,NO5,SE1,SE2,SE3,SE4,SYS
-
+A **MagicMirror²** module that shows **Nord Pool day-ahead electricity prices** for EU/EEA delivery areas. 
+It fetches prices once at startup and again daily, then renders a bar or line chart with optional average line and visual highlights for cheap/expensive hours. 
+Supports both hourly and 15-minute (quarter-hour) resolutions.
 
 ## Bar chart
 ![Screenshot](barchart.png "Screenshot")
@@ -37,6 +30,7 @@ Clone this repository in your modules folder, and install dependencies:
 Go to the MagicMirror/config directory and edit the config.js file. Add the module to your modules array in your config.js.
 
 Enter as minimimum these details in the config.js for your MagicMirror installation:
+your dataSource is found here: https://data.nordpoolgroup.com/map?deliveryDate=latest&currency=EUR&market=DayAhead&mapDataType=Price&resolution=60
 
         {
             module: "MMM-EUElectricityPrice",
@@ -53,162 +47,361 @@ Enter as minimimum these details in the config.js for your MagicMirror installat
 ## Module configuration
 The module has the following configuration options:
 
-<table>
-  <thead>
-    <tr>
-      <th>Option</th>
-	  <th>Default</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code>dataSource</code></td>
-      <td><code>NO1</code></td>
-      <td>The URL where to load the data. Nord Pool lists the available pages here: https://data.nordpoolgroup.com/map?deliveryDate=latest&currency=EUR&market=DayAhead&mapDataType=Price&resolution=60 </td>
-    </tr>
-	<tr>
-      <td><code>chartType</code></td>
-      <td><code>bar</code></td>
-      <td>Choose between line or bar type chart</td>
-    </tr>
-    <tr>
-      <td><code>loadingMessage</code></td>
-      <td><code>Loading Data...</code></td>
-      <td>The message to be shown while the data is loaded from the Nord Pool API.</td>
-    </tr>
-    <tr>
-      <td><code>errorMessage</code></td>
-	  <td><code>Data could not be fetched.</code></td>
-      <td>The error message to be shown if the data loading failed due to an error.</td>
-    </tr>
-    <tr>
-      <td><code>showPastHours</code></td>
-	  <td><code>24</code></td>
-      <td>The amount of past hours to show.</td>
-    </tr>
-    <tr>
-      <td><code>showFutureHours</code></td>
-	  <td><code>36</code></td>
-      <td>The amount of future hours to show.</td>
-    </tr>
-    <tr>
-      <td><code>hourOffset</code></td>
-	  <td><code>1</code></td>
-      <td>The number of hours to offset the Nord Pool times that are given in CET/CEST. Value 1 corrects the time to Finland and the Baltics, 0 works for countries in the CET/CEST timezone, and -1 for countries in GMT.</td>
-    </tr>
-    <tr>
-      <td><code>priceMultiplier</code></td>
-	  <td><code>1</code></td>
-      <td>The price will be multiplied with this multiplier. Useful for adding value added tax and like to the price. The <code>priceOffset</code> will be added after multiplication. <b>ex. 25% VAT is entered as 1.25</b></td>
-    </tr>
-    <tr>
-      <td><code>priceOffset</code></td>
-	  <td><code>0</code></td>
-      <td>The amount in currency to add on top of the price. You can use this to add the transfer cost, comission and other costs to get the final price you are paying. ex 7.13 øre surcharge and 50 øre grid fee is entered as <b>0.5713</b> </td>
-    </tr>
-    <tr>
-      <td><code>showAverage</code></td>
-	  <td><code>false</code></td>
-      <td>Flag to control whether the average price over seven days (future and past) is shown as a line on top of the bars.</td>
-    </tr>
-    <tr>
-      <td><code>averageColor</code></td>
-	  <td><code>#fff</code></td>
-      <td>The color of the average line. Hexadecimals and rgba values, such as <code>rgba(255, 255, 255, 0.8)</code>, are allowed.</td>
-    </tr>
-    <tr>
-      <td><code>showGrid</code></td>
-	  <td><code>true</code></td>
-      <td>Flag to control showing the grid lines.</td>
-    </tr>
-    <tr>
-      <td><code>gridColor</code></td>
-	  <td><code>rgba(255, 255, 255, 0.3)</code></td>
-      <td>The color of the grid lines.</td>
-    </tr>
-    <tr>
-      <td><code>labelColor</code></td>
-	  <td><code>#fff</code></td>
-      <td>The color of the axis labels.</td>
-    </tr>
-    <tr>
-      <td><code>tickInterval</code></td>
-	  <td><code>false</code></td>
-      <td>The interval between ticks (hours on the grid). Default is <code>false</code> to use automatic algorithm. The calculation is based on the hour value, for example, <code>3</code> shows hours 0:00, 3:00, 6:00, etc., and <code>4</code> shows hours 0:00, 4:00, 8:00, etc.</td>
-    </tr>
-    <tr>
-      <td><code>pastColor</code></td>
-	  <td><code>rgba(255, 255, 255, 0.5)</code></td>
-      <td>The border color of the past hour bars.</td>
-    </tr>
-    <tr>
-      <td><code>pastBg</code></td>
-	  <td><code>rgba(255, 255, 255, 0.3)</code></td>
-      <td>The fill color of the past hour bars.</td>
-    </tr>
-    <tr>
-      <td><code>currentColor</code></td>
-	  <td><code>#fff</code></td>
-      <td>The border color of the current hour bar.</td>
-    </tr>
-    <tr>
-      <td><code>currentBg</code></td>
-	  <td><code>#fff</code></td>
-      <td>The fill color of the current hour bar.</td>
-    </tr>
-    <tr>
-      <td><code>futureColor</code></td>
-	  <td><code>rgba(255, 255, 255, 0.8)</code></td>
-      <td>The border color of the future hour bars.</td>
-    </tr>
-    <tr>
-      <td><code>futureBg</code></td>
-	  <td><code>rgba(255, 255, 255, 0.6)</code></td>
-      <td>The fill color of the future hour bars.</td>
-    </tr>
-    <tr>
-      <td><code>alertLimit</code></td>
-	  <td><code>false</code></td>
-      <td>The limit in euro cents or <code>average</code> to set the lower limit for pricier hours. The limit is not used when the value is set to <code>false</code>.</td>
-    </tr>
-    <tr>
-      <td><code>alertColor</code></td>
-	  <td><code>rgba(255, 0, 0, 1)</code></td>
-      <td>The border color of the alert hour bars.</td>
-    </tr>
-    <tr>
-      <td><code>alertBg</code></td>
-	  <td><code>rgba(255, 0,0, 0.8)</code></td>
-      <td>The fill color of the alert hour bars.</td>
-    </tr>
-    <tr>
-      <td><code>safeLimit</code></td>
-	  <td><code>false</code></td>
-      <td>The limit in euro cents or <code>average</code> to set the upper limit for inexpensive hours. The limit is not used when the value is set to <code>false</code>.</td>
-    </tr>
-    <tr>
-      <td><code>safeColor</code></td>
-	  <td><code>rgba(255, 0, 0, 1)</code></td>
-      <td>The border color of the safe hour bars.</td>
-    </tr>
-    <tr>
-      <td><code>safeBg</code></td>
-	  <td><code>rgba(255, 0,0, 0.8)</code></td>
-      <td>The fill color of the safe hour bars.</td>
-    </tr>
-    <tr>
-      <td><code>updateUIInterval</code></td>
-	  <td><code>300</code></td>
-      <td>The interval, in seconds, to update the UI. Updating the UI does not fetch the data from the network again, it just draws the UI to change the current hour.</td>
-    </tr>
-	<tr>
-      <td><code>resolution</code></td>
-	  <td><code>hour</code></td>
-      <td>Chart data pr. hour or quarter.</td>
-    </tr>
-  </tbody>
-</table>
+<table> <thead> <tr> <th>Option</th> <th>Default</th> <th>Description</th> </tr> </thead> <tbody>
+<tr>
+  <td><code>dataSource</code></td>
+  <td><code>NO1</code></td>
+  <td>Nord Pool delivery area (one of: <code>EE</code>, <code>LT</code>, <code>LV</code>, <code>AT</code>, <code>BE</code>, <code>FR</code>, <code>GER</code>, <code>NL</code>, <code>PL</code>, <code>DK1</code>, <code>DK2</code>, <code>FI</code>, <code>NO1</code>–<code>NO5</code>, <code>SE1</code>–<code>SE4</code>, <code>SYS</code>). The module validates this value and shows an error if it’s not allowed.</td>
+</tr>
+
+<tr>
+  <td><code>currency</code></td>
+  <td><code>NOK</code></td>
+  <td>Display currency (one of: <code>NOK</code>, <code>SEK</code>, <code>DKK</code>, <code>PLN</code>, <code>EUR</code>). Invalid values trigger a visible error.</td>
+</tr>
+
+<tr>
+  <td><code>centName</code></td>
+  <td><code>øre</code></td>
+  <td>Unit label shown on the chart (e.g., <em>øre</em> for NOK cents).</td>
+</tr>
+
+<tr>
+  <td><code>headText</code></td>
+  <td><code>Electricity Price</code></td>
+  <td>Title shown above the chart.</td>
+</tr>
+
+<tr>
+  <td><code>customText</code></td>
+  <td><code>""</code></td>
+  <td>Optional small subtitle under the title.</td>
+</tr>
+
+<tr>
+  <td><code>showCurrency</code></td>
+  <td><code>true</code></td>
+  <td>Show the currency next to the title.</td>
+</tr>
+
+<tr>
+  <td><code>tomorrowDataTime</code></td>
+  <td><code>13</code></td>
+  <td>
+    Controls when to pull tomorrow’s prices:<br>
+    • If a <em>number</em> (0–23), fetch at that local hour (uses <code>tomorrowDataTimeMinute</code> for minutes).<br>
+    • If <code>false</code>, use hardened Nord Pool publish time <strong>13:00 Europe/Oslo</strong> regardless of device timezone.
+  </td>
+</tr>
+
+<tr>
+  <td><code>tomorrowDataTimeMinute</code></td>
+  <td><code>1</code></td>
+  <td>Minute part for the manual schedule. Ignored when <code>tomorrowDataTime</code> is <code>false</code>.</td>
+</tr>
+
+<tr>
+  <td><code>errorMessage</code></td>
+  <td><code>Data could not be fetched.</code></td>
+  <td>Shown when a fetch or parse error occurs.</td>
+</tr>
+
+<tr>
+  <td><code>loadingMessage</code></td>
+  <td><code>Loading data...</code></td>
+  <td>Shown while fetching data.</td>
+</tr>
+
+<tr>
+  <td><code>showPastHours</code></td>
+  <td><code>null</code></td>
+  <td>How many hours <em>after</em> the current slot to show (in the chart’s right side). If <code>null</code>, it is derived from <code>totalHours</code>.</td>
+</tr>
+
+<tr>
+  <td><code>showFutureHours</code></td>
+  <td><code>36</code></td>
+  <td>How many hours <em>before</em> the current slot to include (left side). In quarter mode the code internally multiplies by 4.</td>
+</tr>
+
+<tr>
+  <td><code>totalHours</code></td>
+  <td><code>40</code></td>
+  <td>If <code>showPastHours</code> is <code>null</code>, this is used to compute the total visible window.</td>
+</tr>
+
+<tr>
+  <td><code>hourOffset</code></td>
+  <td><code>1</code></td>
+  <td>Offset from CET/CEST to local display time (e.g., <code>1</code> for FI/Baltics, <code>0</code> for CET/CEST, <code>-1</code> for GMT).</td>
+</tr>
+
+<tr>
+  <td><code>priceOffset</code></td>
+  <td><code>0</code></td>
+  <td>Add a fixed surcharge (same currency). Applied <em>after</em> <code>priceMultiplier</code>. Example: <code>0.5713</code> NOK adds 57.13 øre/kWh.</td>
+</tr>
+
+<tr>
+  <td><code>priceMultiplier</code></td>
+  <td><code>1</code></td>
+  <td>Multiply the base price first (e.g., VAT 25% → <code>1.25</code>), then add <code>priceOffset</code>.</td>
+</tr>
+
+<!-- Size / position -->
+<tr>
+  <td><code>width</code></td>
+  <td><code>null</code></td>
+  <td>Wrapper width (CSS value, e.g., <code>320px</code>, <code>20rem</code>). If set, a translate transform is applied using <code>posRight</code>/<code>posDown</code>.</td>
+</tr>
+
+<tr>
+  <td><code>height</code></td>
+  <td><code>null</code></td>
+  <td>Wrapper height (CSS value).</td>
+</tr>
+
+<tr>
+  <td><code>posRight</code></td>
+  <td><code>null</code></td>
+  <td>X-translate offset (CSS length) applied to the wrapper.</td>
+</tr>
+
+<tr>
+  <td><code>posDown</code></td>
+  <td><code>null</code></td>
+  <td>Y-translate offset (CSS length) applied to the wrapper.</td>
+</tr>
+
+<!-- Chart -->
+<tr>
+  <td><code>chartType</code></td>
+  <td><code>bar</code></td>
+  <td><code>bar</code> or <code>line</code>.</td>
+</tr>
+
+<tr>
+  <td><code>showAverage</code></td>
+  <td><code>true</code></td>
+  <td>Draw an average line across the currently displayed window.</td>
+</tr>
+
+<tr>
+  <td><code>averageColor</code></td>
+  <td><code>#fff</code></td>
+  <td>Color for the average line (hex/rgba).</td>
+</tr>
+
+<tr>
+  <td><code>showGrid</code></td>
+  <td><code>true</code></td>
+  <td>Toggle grid lines (both axes).</td>
+</tr>
+
+<tr>
+  <td><code>gridColor</code></td>
+  <td><code>rgba(255, 255, 255, 0.3)</code></td>
+  <td>Grid line color.</td>
+</tr>
+
+<tr>
+  <td><code>labelColor</code></td>
+  <td><code>#fff</code></td>
+  <td>Axis label/tick color.</td>
+</tr>
+
+<tr>
+  <td><code>pastColor</code></td>
+  <td><code>rgba(255, 255, 255, 0.5)</code></td>
+  <td>Border color for past bars/points.</td>
+</tr>
+
+<tr>
+  <td><code>pastBg</code></td>
+  <td><code>rgba(255, 255, 255, 0.3)</code></td>
+  <td>Fill for past bars.</td>
+</tr>
+
+<tr>
+  <td><code>currentColor</code></td>
+  <td><code>#fff</code></td>
+  <td>Border color for the current slot.</td>
+</tr>
+
+<tr>
+  <td><code>currentBg</code></td>
+  <td><code>#fff</code></td>
+  <td>Fill for the current slot (used when <code>currentbgSwitch</code> is <code>true</code>).</td>
+</tr>
+
+<tr>
+  <td><code>currentbgSwitch</code></td>
+  <td><code>false</code></td>
+  <td>If <code>true</code>, the current slot uses <code>currentBg</code>; if <code>false</code>, it uses <code>futureBg</code> for a subtler look.</td>
+</tr>
+
+<tr>
+  <td><code>futureColor</code></td>
+  <td><code>rgba(255, 255, 255, 0.8)</code></td>
+  <td>Border color for future bars/points.</td>
+</tr>
+
+<tr>
+  <td><code>futureBg</code></td>
+  <td><code>rgba(255, 255, 255, 0.6)</code></td>
+  <td>Fill for future bars.</td>
+</tr>
+
+<!-- Alerts / Safe -->
+<tr>
+  <td><code>alertLimit</code></td>
+  <td><code>false</code></td>
+  <td>Enable expensive-hour highlighting. When <code>true</code>, values above <code>alertValue</code> are colored (<code>alertColor</code>/<code>alertBg</code>).</td>
+</tr>
+
+<tr>
+  <td><code>alertValue</code></td>
+  <td><code>100</code></td>
+  <td>Threshold in <em><code>centName</code> per kWh</em> (e.g., 100 = 100&nbsp;øre/kWh). You can also use the string <code>"average"</code> to highlight hours above the current window’s average.</td>
+</tr>
+
+<tr>
+  <td><code>alertColor</code></td>
+  <td><code>rgba(255, 0, 0, 1)</code></td>
+  <td>Border color for expensive hours.</td>
+</tr>
+
+<tr>
+  <td><code>alertBg</code></td>
+  <td><code>rgba(255, 0, 0, 0.8)</code></td>
+  <td>Fill color for expensive hours.</td>
+</tr>
+
+<tr>
+  <td><code>safeLimit</code></td>
+  <td><code>false</code></td>
+  <td>Enable cheap-hour highlighting. When <code>true</code>, values below <code>safeValue</code> are colored (<code>safeColor</code>/<code>safeBg</code>).</td>
+</tr>
+
+<tr>
+  <td><code>safeValue</code></td>
+  <td><code>50</code></td>
+  <td>Threshold in <em><code>centName</code> per kWh</em> (e.g., 50 = 50&nbsp;øre/kWh). You can also use <code>"average"</code> to mark hours below the current window’s average.</td>
+</tr>
+
+<tr>
+  <td><code>safeColor</code></td>
+  <td><code>rgba(0, 255, 0, 1)</code></td>
+  <td>Border color for cheap hours.</td>
+</tr>
+
+<tr>
+  <td><code>safeBg</code></td>
+  <td><code>rgba(0, 255, 0, 0.8)</code></td>
+  <td>Fill color for cheap hours.</td>
+</tr>
+
+<!-- Scales / formatting -->
+<tr>
+  <td><code>beginAtZero</code></td>
+  <td><code>true</code></td>
+  <td>Y-axis starts at zero.</td>
+</tr>
+
+<tr>
+  <td><code>yDecimals</code></td>
+  <td><code>2</code></td>
+  <td>Number of decimals shown on the Y-axis.</td>
+</tr>
+
+<!-- Line-only -->
+<tr>
+  <td><code>borderWidthLine</code></td>
+  <td><code>3</code></td>
+  <td>Line width for line charts.</td>
+</tr>
+
+<tr>
+  <td><code>pointRegular</code></td>
+  <td><code>4</code></td>
+  <td>Point radius for full-hour nodes in line charts.</td>
+</tr>
+
+<tr>
+  <td><code>pointCurrent</code></td>
+  <td><code>10</code></td>
+  <td>Point radius for the current slot in line charts.</td>
+</tr>
+
+<tr>
+  <td><code>pointQuarter</code></td>
+  <td><code>2</code></td>
+  <td>Point radius for quarter-hour nodes in line charts.</td>
+</tr>
+
+<!-- Bar-only -->
+<tr>
+  <td><code>borderWidthBar</code></td>
+  <td><code>1</code></td>
+  <td>Bar border width for bar charts.</td>
+</tr>
+
+<!-- X axis labels / ticks -->
+<tr>
+  <td><code>xLabelDiagonal</code></td>
+  <td><code>true</code></td>
+  <td>Rotate X-axis labels diagonally.</td>
+</tr>
+
+<tr>
+  <td><code>xLabelAngle</code></td>
+  <td><code>60</code></td>
+  <td>Angle (degrees) for diagonal labels.</td>
+</tr>
+
+<tr>
+  <td><code>xLabelPadding</code></td>
+  <td><code>4</code></td>
+  <td>Padding around X-axis labels.</td>
+</tr>
+
+<tr>
+  <td><code>xAutoSkip</code></td>
+  <td><code>false</code></td>
+  <td>Let Chart.js auto-thin X labels when needed.</td>
+</tr>
+
+<tr>
+  <td><code>xMaxTicks</code></td>
+  <td><code>null</code></td>
+  <td>Cap the number of X-axis ticks (leave <code>null</code> to let Chart.js decide).</td>
+</tr>
+
+<tr>
+  <td><code>xLabelEveryHours</code></td>
+  <td><code>1</code></td>
+  <td>Render a label every N hours (applies in both <code>hour</code> and <code>quarter</code> modes; quarter mode still only labels full hours).</td>
+</tr>
+
+<!-- Misc -->
+<tr>
+  <td><code>tickInterval</code></td>
+  <td><code>false</code></td>
+  <td><em>Legacy</em> (kept for compatibility). X-axis labeling is now controlled by the <code>x*</code> options above.</td>
+</tr>
+
+<tr>
+  <td><code>updateUIInterval</code></td>
+  <td><code>300</code></td>
+  <td>Redraw interval in seconds (does not refetch; updates the current-time highlight and chart).</td>
+</tr>
+
+<tr>
+  <td><code>resolution</code></td>
+  <td><code>hour</code></td>
+  <td><code>hour</code> = aggregate 15-min prices per hour; <code>quarter</code> = show 15-minute prices and mini points on the line chart.</td>
+</tr>
+</tbody> </table>
 
 ## Changelog
 

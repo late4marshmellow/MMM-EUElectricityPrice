@@ -15,11 +15,11 @@ Module.register("MMM-EUElectricityPrice", {
     headText: 'Electricity Price',
     customText: '',
     showCurrency: true,
-    tomorrowDataTime: 13,
-    tomorrowDataTimeMinute: 1,
+    tomorrowDataTime: 13, //set to false if you want standard settings
+    tomorrowDataTimeMinute: 1, //ignored if tomorrowDataTime is false
     errorMessage: 'Data could not be fetched.',
     loadingMessage: 'Loading data...',
-    showPastHours: 24,
+    showPastHours: null,
     showFutureHours: 36,
     totalHours: 40,
     hourOffset: 1,
@@ -65,12 +65,20 @@ Module.register("MMM-EUElectricityPrice", {
     updateUIInterval: 5 * 60,
     yDecimals: 2,
     // Resolution switch
-    resolution: 'hour' // 'quarter' (15-min) | 'hour' (aggregate per date+hour)
+    resolution: 'hour', // 'quarter' (15-min) | 'hour' (aggregate per date+hour)
+    // chart label rotation
+    xLabelDiagonal: true,   // if true, rotate labels
+    xLabelAngle: 60,        // angle in degrees for diagonal labels (e.g., 45–70 is typical)
+    xLabelPadding: 4,       // extra padding so labels don’t clip
+    xAutoSkip: false,     // let Chart.js auto-thin labels
+    xMaxTicks: null,     // cap number of x ticks (null = let Chart.js decide)
+    xLabelEveryHours: 1, // show a label every N hours (works in both hour/quarter modes)
+
   },
 
   // If you use Chart.js v4, keep this path (UMD). For v3, use 'dist/chart.min.js'
   getScripts: function () {
-  return [this.file('chart-loader.js')];
+    return [this.file('chart-loader.js')];
   },
 
   start: function () {
@@ -87,14 +95,60 @@ Module.register("MMM-EUElectricityPrice", {
       clearTimeout(this.timeout);
       this.timeout = false;
     }
+
+    // Always try now (triggers helper fetch)
     this.getPriceData();
-    const hour = this.config.tomorrowDataTime;
-    const minute = this.config.tomorrowDataTimeMinute;
+
+    // MODE:
+    // - Manual override (back-compat): tomorrowDataTime is a number -> use local device clock at that HH:MM
+    // - Hardened Oslo mode: tomorrowDataTime === false -> use 13:00 Europe/Oslo
+    const manualMode = (typeof this.config.tomorrowDataTime === 'number');
+
+    // helper: today at HH:MM in a *given* IANA timezone, mapped to a local Date for scheduling
+    const dateAtTZLocalDay = (tz, hour, minute) => {
+      const now = new Date();
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit'
+      }).formatToParts(now);
+      const y = parts.find(p => p.type === 'year').value;
+      const m = parts.find(p => p.type === 'month').value;
+      const d = parts.find(p => p.type === 'day').value;
+      // Create a local Date that corresponds to that TZ’s current calendar day at hour:minute
+      return new Date(`${y}-${m}-${d}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`);
+    };
+
+    // Compute publish time “today” and “tomorrow”
     const now = new Date();
-    let updateMoment = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0).getTime() - now.getTime();
-    if (updateMoment < 1000) updateMoment += 86400000;
-    this.timeout = setTimeout(() => this.schedulePriceUpdate(), updateMoment);
+    const publishTimeToday = manualMode
+      ? new Date(
+        now.getFullYear(), now.getMonth(), now.getDate(),
+        this.config.tomorrowDataTime,
+        this.config.tomorrowDataTimeMinute || 0,
+        0, 0
+      )
+      : dateAtTZLocalDay('Europe/Oslo', 13, 0); // Hardened Oslo time
+
+    const publishTimeTomorrow = new Date(publishTimeToday.getTime() + 24 * 60 * 60 * 1000);
+
+    // Polling window after publish to catch late postings
+    const GRACE_MINUTES = 60;
+    const POLL_EVERY_MS = 5 * 60 * 1000;
+
+    let nextDelay;
+    if (now < publishTimeToday) {
+      // Not yet at publish time -> sleep until publish
+      nextDelay = publishTimeToday.getTime() - now.getTime();
+    } else if (now - publishTimeToday < GRACE_MINUTES * 60 * 1000) {
+      // Within grace window -> poll every 5 minutes
+      nextDelay = POLL_EVERY_MS;
+    } else {
+      // Past grace window -> schedule for tomorrow’s publish
+      nextDelay = publishTimeTomorrow.getTime() - now.getTime();
+    }
+
+    this.timeout = setTimeout(() => this.schedulePriceUpdate(), nextDelay);
   },
+
 
   scheduleUIUpdate: function () {
     setInterval(() => this.updateDom(), this.config.updateUIInterval * 1000);
@@ -111,9 +165,9 @@ Module.register("MMM-EUElectricityPrice", {
     let yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
     let formattedYesterday = `${yesterday.getFullYear()}-${yesterday.getMonth() + 1}-${yesterday.getDate()}`;
-    
+
     let tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);    
+    tomorrow.setDate(today.getDate() + 1);
     let formattedTomorrow = `${tomorrow.getFullYear()}-${tomorrow.getMonth() + 1}-${tomorrow.getDate()}`;
 
     if (!this.validCurrencies.includes(this.config.currency)) {
@@ -213,8 +267,8 @@ Module.register("MMM-EUElectricityPrice", {
       minutesRounded, 0, 0
     );
     currentSlot = new Date(currentSlot - currentSlot.getTimezoneOffset() * 60000).toISOString();
-    const currentDate = currentSlot.substring(0,10);
-    const currentTime = currentSlot.substring(11,19); // HH:MM:SS
+    const currentDate = currentSlot.substring(0, 10);
+    const currentTime = currentSlot.substring(11, 19); // HH:MM:SS
 
     let currentHourMark = false;
     for (let i = 0; i < this.priceData.length; i++) {
@@ -234,12 +288,12 @@ Module.register("MMM-EUElectricityPrice", {
     let pastMark = this.priceData.length - 1;
 
     if (this.config.showFutureHours !== false) {
-      futureMark = Math.max(currentHourMark - this.config.showFutureHours*4, 0);
+      futureMark = Math.max(currentHourMark - this.config.showFutureHours * 4, 0);
     }
 
-    let showPastHours = this.config.showPastHours*4;
-    if (showPastHours === null) {
-      showPastHours = this.config.totalHours*4 - (currentHourMark - futureMark);
+    let showPastHours = this.config.showPastHours * 4;
+    if (showPastHours === null | showPastHours === 0) {
+      showPastHours = this.config.totalHours * 4 - (currentHourMark - futureMark);
       showPastHours = Math.max(showPastHours, 0);
     }
     if (showPastHours !== false) {
@@ -247,11 +301,11 @@ Module.register("MMM-EUElectricityPrice", {
     }
 
     // --- Build base arrays (quarters) ---
-    const showData  = [];
+    const showData = [];
     const showLabel = [];
     const showColor = [];
-    const showBg    = [];
-    const showDate  = []; // track date for hourly aggregation
+    const showBg = [];
+    const showDate = []; // track date for hourly aggregation
 
     let alertValue = null;
     let safeValue = null;
@@ -267,7 +321,7 @@ Module.register("MMM-EUElectricityPrice", {
       // data
       showData.unshift(value / 1000);
       // labels "H:MM" or "HH:MM"
-      showLabel.unshift(time[0] === '0' ? time.substring(1,5) : time.substring(0,5));
+      showLabel.unshift(time[0] === '0' ? time.substring(1, 5) : time.substring(0, 5));
       // date
       showDate.unshift(date);
       // colors/bg
@@ -290,35 +344,35 @@ Module.register("MMM-EUElectricityPrice", {
     }
 
     // ---- Resolution switch ----
-    let dispData  = showData.slice();
+    let dispData = showData.slice();
     let dispLabel = showLabel.slice();
     let dispColor = showColor.slice();
-    let dispBg    = showBg.slice();
-    let dispDate  = showDate.slice();
+    let dispBg = showBg.slice();
+    let dispDate = showDate.slice();
 
     const hourOnly = (lbl) => String(lbl).split(':')[0].padStart(2, '0') + ':00';
 
     if (this.config.resolution === 'hour') {
       // Aggregate by DATE + HOUR
       const buckets = {}; // key "YYYY-MM-DD HH:00" -> { sum, n, color, bg }
-      const order   = []; // preserve first-seen order
+      const order = []; // preserve first-seen order
 
       for (let idx = 0; idx < dispLabel.length; idx++) {
         const keyHour = hourOnly(dispLabel[idx]);
-        const key     = `${dispDate[idx]} ${keyHour}`;
+        const key = `${dispDate[idx]} ${keyHour}`;
         if (!buckets[key]) {
           buckets[key] = { sum: 0, n: 0, color: dispColor[idx], bg: dispBg[idx] };
           order.push(key);
         }
         buckets[key].sum += dispData[idx];
-        buckets[key].n   += 1;
+        buckets[key].n += 1;
       }
 
       dispLabel = order.map(k => k.slice(11));      // "HH:00" for axis
-      dispData  = order.map(k => buckets[k].sum / buckets[k].n);
+      dispData = order.map(k => buckets[k].sum / buckets[k].n);
       dispColor = order.map(k => buckets[k].color);
-      dispBg    = order.map(k => buckets[k].bg);
-      dispDate  = order.map(k => k.slice(0,10));    // keep date for current marker
+      dispBg = order.map(k => buckets[k].bg);
+      dispDate = order.map(k => k.slice(0, 10));    // keep date for current marker
     }
 
     // --- Chart DOM ---
@@ -329,7 +383,7 @@ Module.register("MMM-EUElectricityPrice", {
     // Average line across displayed data
     let averageSet = {};
     if (this.config.showAverage) {
-      const sumDisp = dispData.reduce((a,b)=>a+b,0);
+      const sumDisp = dispData.reduce((a, b) => a + b, 0);
       const avgDisp = dispData.length ? sumDisp / dispData.length : 0;
       averageSet = {
         type: 'line',
@@ -350,7 +404,8 @@ Module.register("MMM-EUElectricityPrice", {
 
     const self = this;
     const borderWidth = (this.config.chartType === 'line') ? this.config.borderWidthLine : this.config.borderWidthBar;
-
+    const diagonal = !!this.config.xLabelDiagonal;
+    const angle = Math.max(0, Math.min(90, this.config.xLabelAngle || 60));
     // Build chart (guarded)
     let myChart = null;
     try {
@@ -377,7 +432,7 @@ Module.register("MMM-EUElectricityPrice", {
               beginAtZero: this.config.beginAtZero,
               ticks: {
                 color: this.config.labelColor,
-                callback: function(value) {
+                callback: function (value) {
                   const d = Math.max(0, Math.min(2, self.config.yDecimals));
                   return Number(value).toFixed(d);
                 }
@@ -386,13 +441,37 @@ Module.register("MMM-EUElectricityPrice", {
             x: {
               ticks: {
                 color: this.config.labelColor,
-                autoSkip: (this.config.resolution === 'hour'),
-                maxTicksLimit: (this.config.resolution === 'hour') ? 12 : undefined,
+
+                // Control autoskip & density
+                autoSkip: !!this.config.xAutoSkip,
+                maxTicksLimit: (typeof this.config.xMaxTicks === 'number')
+                  ? this.config.xMaxTicks
+                  : (this.config.resolution === 'hour' ? 24 : undefined),
+
+                // Rotate (your diagonal settings)
+                maxRotation: diagonal ? angle : 0,
+                minRotation: diagonal ? angle : 0,
+                padding: this.config.xLabelPadding ?? 4,
+                align: diagonal ? 'end' : 'center',
+
+                // Decide which labels to render
                 callback: function (value) {
-                  const val = this.getLabelForValue(value);
-                  if (self.config.resolution === 'hour') return val; // already HH:00
-                  const mm = typeof val === 'string' ? val.slice(-2) : '';
-                  return (mm === '00') ? val : '';
+                  const val = this.getLabelForValue(value); // e.g. "HH:MM"
+                  const step = Math.max(1, Number(self.config.xLabelEveryHours || 1));
+
+                  if (self.config.resolution === 'hour') {
+                    // labels are "HH:00"
+                    const hh = parseInt(String(val).slice(0, 2), 10);
+                    return (hh % step === 0) ? val : '';
+                  } else {
+                    // quarter resolution: only label full hours that match step
+                    // existing behavior keeps only HH:00; now also apply modulo step
+                    if (typeof val !== 'string') return '';
+                    const isFullHour = val.slice(-2) === '00';
+                    if (!isFullHour) return '';
+                    const hh = parseInt(val.slice(0, 2), 10);
+                    return (hh % step === 0) ? val : '';
+                  }
                 }
               },
               grid: this.config.showGrid ? {
@@ -416,15 +495,15 @@ Module.register("MMM-EUElectricityPrice", {
             legend: { display: false },
             tooltip: (this.config.chartType === 'line' && this.config.resolution === 'quarter')
               ? {
-                  filter: (ctx) => {
-                    const lbl = ctx.label || '';
-                    const mm = typeof lbl === 'string' ? lbl.slice(-2) : '';
-                    const currentIdxDisplayed = (pastMark - currentHourMark);
-                    const isCurrent = ctx.dataIndex === currentIdxDisplayed;
-                    const isHour = (mm === '00');
-                    return isHour || isCurrent;
-                  }
+                filter: (ctx) => {
+                  const lbl = ctx.label || '';
+                  const mm = typeof lbl === 'string' ? lbl.slice(-2) : '';
+                  const currentIdxDisplayed = (pastMark - currentHourMark);
+                  const isCurrent = ctx.dataIndex === currentIdxDisplayed;
+                  const isHour = (mm === '00');
+                  return isHour || isCurrent;
                 }
+              }
               : {}
           }
         }
@@ -445,12 +524,12 @@ Module.register("MMM-EUElectricityPrice", {
         pointSizes = dispLabel.map((lbl, idx) => {
           const mm = String(lbl).slice(-2);
           if (idx === currentIdxDisplayed) return this.config.pointCurrent; // current big
-          if (mm === '00')                return this.config.pointRegular;  // full-hour node
+          if (mm === '00') return this.config.pointRegular;  // full-hour node
           return this.config.pointQuarter;                                  // mini nodes
         });
       } else { // hour mode
         const currentHourLabel = hourOnly(showLabel[pastMark - currentHourMark]); // "HH:00"
-        const currentDateStr   = showDate[pastMark - currentHourMark];            // "YYYY-MM-DD"
+        const currentDateStr = showDate[pastMark - currentHourMark];            // "YYYY-MM-DD"
         pointSizes = dispLabel.map((lbl, idx) =>
           (dispDate[idx] === currentDateStr && lbl === currentHourLabel)
             ? this.config.pointCurrent
@@ -463,12 +542,12 @@ Module.register("MMM-EUElectricityPrice", {
 
     // --- Info strip (now, min/max, avg over displayed) ---
     const currentValue = (this.priceData[currentHourMark].value / 1000).toFixed(2);
-    const dispAvg = dispData.length ? (dispData.reduce((a,b)=>a+b,0) / dispData.length).toFixed(2) : '--';
+    const dispAvg = dispData.length ? (dispData.reduce((a, b) => a + b, 0) / dispData.length).toFixed(2) : '--';
 
     // past 24h stats (raw data, regardless of resolution)
-    const past24 = this.priceData.slice(Math.max(currentHourMark - 24*4, 0), currentHourMark);
-    const low24 = past24.length ? (Math.min(...past24.map(i=>i.value)) / 1000).toFixed(2) : '--';
-    const high24 = past24.length ? (Math.max(...past24.map(i=>i.value)) / 1000).toFixed(2) : '--';
+    const past24 = this.priceData.slice(Math.max(currentHourMark - 24 * 4, 0), currentHourMark);
+    const low24 = past24.length ? (Math.min(...past24.map(i => i.value)) / 1000).toFixed(2) : '--';
+    const high24 = past24.length ? (Math.max(...past24.map(i => i.value)) / 1000).toFixed(2) : '--';
 
     const infoDiv = document.createElement("div");
     infoDiv.className = 'bright';
