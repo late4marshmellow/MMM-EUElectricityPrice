@@ -326,35 +326,36 @@ const unitLabel = this.config.displayInSubunit ? this.config.centName : this.con
       safeValue = (this.config.safeValue == 'average') ? this.priceMetadata['average'] : this.config.safeValue * 10;
     }
 
-    for (let i = startIdx; i <= endIdx; i++) {
-      const { value, time, date } = this.priceData[i];
+for (let i = startIdx; i <= endIdx; i++) {
+  const { value, time, date } = this.priceData[i];
 
-      // data + labels + date
-      showData.push((value / 1000) * DISPLAY_FACTOR);
-      showLabel.push(time[0] === '0' ? time.substring(1, 5) : time.substring(0, 5));
-      showDate.push(date);
+  // ⚡ final price (base + offset + grid) is already in value
+  const displayVal = (value / 1000) * DISPLAY_FACTOR;
 
+  showData.push(displayVal);
+  showLabel.push(time[0] === '0' ? time.substring(1, 5) : time.substring(0, 5));
+  showDate.push(date);
 
-      // --- NODE colors only ---
-      if (i === currentHourMark) {
-        showColor.push(this.config.currentColor);             // current node (e.g., white)
-        showBg.push(this.config.futureBg);                    // not used for line nodes, ok to keep
-      } else if (i < currentHourMark) {                          // PAST nodes -> grey
-        showColor.push(this.config.pastColor);
-        showBg.push(this.config.pastBg);
-      } else {                                                   // FUTURE nodes
-        if (this.config.alertLimit !== false && value > alertValue) {
-          showColor.push(this.config.alertColor);             // ALERT node
-          showBg.push(this.config.alertBg);
-        } else if (this.config.safeLimit !== false && value < safeValue) {
-          showColor.push(this.config.safeColor);              // SAFE node
-          showBg.push(this.config.safeBg);
-        } else {
-          showColor.push(this.config.normalColor);            // NORMAL node (blue)
-          showBg.push(this.config.futureBg);                  // background not used for line nodes
-        }
-      }
+  if (i === currentHourMark) {
+    showColor.push(this.config.currentColor);
+    showBg.push(this.config.futureBg);
+  } else if (i < currentHourMark) {
+    showColor.push(this.config.pastColor);
+    showBg.push(this.config.pastBg);
+  } else {
+    if (this.config.alertLimit !== false && displayVal > alertValue) {
+      showColor.push(this.config.alertColor);
+      showBg.push(this.config.alertBg);
+    } else if (this.config.safeLimit !== false && displayVal < safeValue) {
+      showColor.push(this.config.safeColor);
+      showBg.push(this.config.safeBg);
+    } else {
+      showColor.push(this.config.normalColor);
+      showBg.push(this.config.futureBg);
     }
+  }
+}
+
 
 
     // ---- Resolution switch ----
