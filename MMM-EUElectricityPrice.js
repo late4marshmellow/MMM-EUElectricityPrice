@@ -1,22 +1,16 @@
-/* Magic Mirror
-* Module: MMM-EUElectricityPrice
-*
-* By late4marshmellow a fork from JanneKalliola (MMM-FiElectricityPrice)
-*
-*/
-
 Module.register("MMM-EUElectricityPrice", {
-  validDataSources: ['EE', 'LT', 'LV', 'AT', 'BE', 'FR', 'GER', 'NL', 'PL', 'DK1', 'DK2', 'FI', 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4', 'SYS'],
+  validDataSources: ['EE', 'LT', 'LV', 'AT', 'BE', 'FR', 'DE', 'NL', 'PL', 'DK1', 'DK2', 'FI', 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4', 'SYS'],
   validCurrencies: ['NOK', 'SEK', 'DKK', 'PLN', 'EUR'],
   defaults: {
     dataSource: 'NO1',
     currency: 'NOK',
     centName: 'øre',
+    displayInSubunit: false,
     headText: 'Electricity Price',
     customText: '',
     showCurrency: true,
-    tomorrowDataTime: 13, //set to false if you want standard settings
-    tomorrowDataTimeMinute: 1, //ignored if tomorrowDataTime is false
+    tomorrowDataTime: false,
+    tomorrowDataTimeMinute: 1,
     errorMessage: 'Data could not be fetched.',
     loadingMessage: 'Loading data...',
     showPastHours: null,
@@ -25,13 +19,15 @@ Module.register("MMM-EUElectricityPrice", {
     hourOffset: 1,
     priceOffset: 0,
     priceMultiplier: 1,
-    // size/position
+    gridPriceRules: [
+      { from: '06:00', to: '22:00', add: 47.66 },
+      { from: '22:00', to: '06:00', add: 32.66 }
+    ],
     width: null,
     height: null,
     posRight: null,
     posDown: null,
-    // chart
-    chartType: 'bar', // 'line' | 'bar'
+    chartType: 'bar',
     showAverage: true,
     averageColor: '#fff',
     showGrid: true,
@@ -39,16 +35,15 @@ Module.register("MMM-EUElectricityPrice", {
     labelColor: '#fff',
     pastColor: 'rgba(255, 255, 255, 0.5)',
     pastBg: 'rgba(255, 255, 255, 0.3)',
-    currentColor: '#CC7722', //#fff - old default
-    currentBg: '#CC7722', //#fff - old default
-    normalColor: '#3b82f6', // blue for “normal” future nodes
+    currentColor: '#CC7722',
+    currentBg: '#CC7722',
+    normalColor: '#3b82f6',
     currentbgSwitch: false,
     futureColor: 'rgba(255, 255, 255, 0.8)',
     futureBg: 'rgba(255, 255, 255, 0.6)',
-    // line colors (NEW)
-    lineColor: null,                      // if set (e.g. '#888'), use ONE color for the whole line
-    pastLineColor: 'rgba(255,255,255,0.5)',   // used when lineColor is null
-    futureLineColor: 'rgba(255,255,255,0.6)', // used when lineColor is null
+    lineColor: null,
+    pastLineColor: 'rgba(255,255,255,0.5)',
+    futureLineColor: 'rgba(255,255,255,0.6)',
     alertLimit: false,
     alertValue: 100,
     alertColor: '#B22222',
@@ -58,30 +53,23 @@ Module.register("MMM-EUElectricityPrice", {
     safeColor: '#228B22',
     safeBg: '#228B22',
     beginAtZero: true,
-    // line chart only
     borderWidthLine: 3,
-    pointRegular: 4,   // full-hour node size (line)
-    pointCurrent: 10,  // current node size (line)
-    pointQuarter: 2,   // 15/30/45 mini nodes (line)
-    // bar chart only
+    pointRegular: 4,
+    pointCurrent: 10,
+    pointQuarter: 2,
     borderWidthBar: 1,
-    // Other
     tickInterval: false,
     updateUIInterval: 5 * 60,
     yDecimals: 2,
-    // Resolution switch
-    resolution: 'hour', // 'quarter' (15-min) | 'hour' (aggregate per date+hour)
-    // chart label rotation
-    xLabelDiagonal: true,   // if true, rotate labels
-    xLabelAngle: 60,        // angle in degrees for diagonal labels (e.g., 45–70 is typical)
-    xLabelPadding: 4,       // extra padding so labels don’t clip
-    xAutoSkip: false,     // let Chart.js auto-thin labels
-    xMaxTicks: null,     // cap number of x ticks (null = let Chart.js decide)
-    xLabelEveryHours: 1, // show a label every N hours (works in both hour/quarter modes)
-
+    resolution: 'hour',
+    xLabelDiagonal: true,
+    xLabelAngle: 60,
+    xLabelPadding: 4,
+    xAutoSkip: false,
+    xMaxTicks: null,
+    xLabelEveryHours: 1
   },
 
-  // If you use Chart.js v4, keep this path (UMD). For v3, use 'dist/chart.min.js'
   getScripts: function () {
     return [this.file('chart-loader.js')];
   },
@@ -89,6 +77,7 @@ Module.register("MMM-EUElectricityPrice", {
   start: function () {
     this.error = false;
     this.priceData = false;
+    this.gridAddSubunit = 0;
     this.priceMetadata = {};
     this.timeout = false;
     this.schedulePriceUpdate();
@@ -100,60 +89,55 @@ Module.register("MMM-EUElectricityPrice", {
       clearTimeout(this.timeout);
       this.timeout = false;
     }
-
-    // Always try now (triggers helper fetch)
     this.getPriceData();
 
-    // MODE:
-    // - Manual override (back-compat): tomorrowDataTime is a number -> use local device clock at that HH:MM
-    // - Hardened Oslo mode: tomorrowDataTime === false -> use 13:00 Europe/Oslo
     const manualMode = (typeof this.config.tomorrowDataTime === 'number');
-
-    // helper: today at HH:MM in a *given* IANA timezone, mapped to a local Date for scheduling
-    const dateAtTZLocalDay = (tz, hour, minute) => {
+    const minutesInTZ = (tz) => {
       const now = new Date();
-      const parts = new Intl.DateTimeFormat('en-CA', {
-        timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit'
-      }).formatToParts(now);
-      const y = parts.find(p => p.type === 'year').value;
-      const m = parts.find(p => p.type === 'month').value;
-      const d = parts.find(p => p.type === 'day').value;
-      // Create a local Date that corresponds to that TZ’s current calendar day at hour:minute
-      return new Date(`${y}-${m}-${d}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`);
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: tz,
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      }).format(now).split(':').map(Number);
+      const h = parts[0] || 0, m = parts[1] || 0;
+      return h * 60 + m;
     };
 
-    // Compute publish time “today” and “tomorrow”
-    const now = new Date();
-    const publishTimeToday = manualMode
-      ? new Date(
-        now.getFullYear(), now.getMonth(), now.getDate(),
-        this.config.tomorrowDataTime,
-        this.config.tomorrowDataTimeMinute || 0,
-        0, 0
-      )
-      : dateAtTZLocalDay('Europe/Oslo', 13, 0); // Hardened Oslo time
-
-    const publishTimeTomorrow = new Date(publishTimeToday.getTime() + 24 * 60 * 60 * 1000);
-
-    // Polling window after publish to catch late postings
+    let nextDelay;
     const GRACE_MINUTES = 60;
     const POLL_EVERY_MS = 5 * 60 * 1000;
 
-    let nextDelay;
-    if (now < publishTimeToday) {
-      // Not yet at publish time -> sleep until publish
-      nextDelay = publishTimeToday.getTime() - now.getTime();
-    } else if (now - publishTimeToday < GRACE_MINUTES * 60 * 1000) {
-      // Within grace window -> poll every 5 minutes
-      nextDelay = POLL_EVERY_MS;
-    } else {
-      // Past grace window -> schedule for tomorrow’s publish
-      nextDelay = publishTimeTomorrow.getTime() - now.getTime();
-    }
+    if (manualMode) {
+      const now = new Date();
+      const publishTimeToday = new Date(
+        now.getFullYear(), now.getMonth(), now.getDate(),
+        this.config.tomorrowDataTime,
+        this.config.tomorrowDataTimeMinute || 0, 0, 0
+      );
+      const publishTimeTomorrow = new Date(publishTimeToday.getTime() + 24 * 60 * 60 * 1000);
 
+      if (now < publishTimeToday) {
+        nextDelay = publishTimeToday.getTime() - now.getTime();
+      } else if (now - publishTimeToday < GRACE_MINUTES * 60 * 1000) {
+        nextDelay = POLL_EVERY_MS;
+      } else {
+        nextDelay = publishTimeTomorrow.getTime() - now.getTime();
+      }
+    } else {
+      const TZ = 'Europe/Oslo';
+      const TARGET_MIN = 13 * 60;
+      const nowMin = minutesInTZ(TZ);
+      if (nowMin < TARGET_MIN) {
+        nextDelay = (TARGET_MIN - nowMin) * 60 * 1000;
+      } else if (nowMin < TARGET_MIN + GRACE_MINUTES) {
+        nextDelay = POLL_EVERY_MS;
+      } else {
+        const untilMidnight = (24 * 60 - nowMin) * 60 * 1000;
+        const toTargetTomorrow = TARGET_MIN * 60 * 1000;
+        nextDelay = untilMidnight + toTargetTomorrow;
+      }
+    }
     this.timeout = setTimeout(() => this.schedulePriceUpdate(), nextDelay);
   },
-
 
   scheduleUIUpdate: function () {
     setInterval(() => this.updateDom(), this.config.updateUIInterval * 1000);
@@ -163,14 +147,11 @@ Module.register("MMM-EUElectricityPrice", {
   getPriceData: function () {
     let currency = this.config.currency;
     let urlToday, urlTomorrow, urlYesterday;
-
     let today = new Date();
     let formattedToday = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
-
     let yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
     let formattedYesterday = `${yesterday.getFullYear()}-${yesterday.getMonth() + 1}-${yesterday.getDate()}`;
-
     let tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
     let formattedTomorrow = `${tomorrow.getFullYear()}-${tomorrow.getMonth() + 1}-${tomorrow.getDate()}`;
@@ -192,6 +173,7 @@ Module.register("MMM-EUElectricityPrice", {
       urlToday = `https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?market=DayAhead&date=${formattedToday}&currency=${currency}&deliveryArea=${this.config.dataSource}`;
       urlTomorrow = `https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?market=DayAhead&date=${formattedTomorrow}&currency=${currency}&deliveryArea=${this.config.dataSource}`;
     }
+
     this.sendSocketNotification('GET_PRICEDATA', {
       urlToday,
       urlTomorrow,
@@ -202,13 +184,15 @@ Module.register("MMM-EUElectricityPrice", {
       priceMultiplier: this.config.priceMultiplier,
       dataSource: this.config.dataSource,
       validDataSources: this.validDataSources,
+      gridPriceRules: this.config.gridPriceRules
     });
   },
 
   socketNotificationReceived: function (notification, payload) {
     if (notification === "PRICEDATA") {
       this.error = false;
-      this.priceData = payload;
+      this.priceData = payload.priceData;
+      this.gridAddSubunit = payload.gridAddSubunit;
       if (this.priceData.length > 0) {
         let sum = 0;
         for (let i = 0; i < this.priceData.length; i++) sum += this.priceData[i].value;
@@ -217,7 +201,6 @@ Module.register("MMM-EUElectricityPrice", {
         this.priceMetadata['average'] = false;
       }
     } else if (notification === "PRICEDATAERROR") {
-      console.log("Error:", payload);
       this.setError(`Data fetch issue: ${payload || 'Unknown error'}`);
     } else if (notification === "INVALID_DATASOURCE") {
       this.setError(payload);
@@ -253,6 +236,15 @@ Module.register("MMM-EUElectricityPrice", {
       return wrapper;
     }
 
+    // Display grid energy from helper
+    const d2 = Math.max(0, Math.min(2, this.config.yDecimals));
+    const gridEnergy = this.config.displayInSubunit
+      ? (Math.round(this.gridAddSubunit)).toString()
+      : (this.gridAddSubunit / 100).toFixed(d2);
+
+
+
+
     // Guard: Chart.js not loaded yet
     if (typeof Chart === 'undefined') {
       wrapper.innerHTML = 'Loading chart library...';
@@ -260,6 +252,11 @@ Module.register("MMM-EUElectricityPrice", {
       setTimeout(() => this.updateDom(), 1500);
       return wrapper;
     }
+
+    // Display scaling (main vs sub-unit)
+const DISPLAY_FACTOR = this.config.displayInSubunit ? 100 : 1;
+// Label for axis and info strip
+const unitLabel = this.config.displayInSubunit ? this.config.centName : this.config.currency;
 
     // --- Current slot (rounded down to nearest 15 min) ---
     let now = new Date();
@@ -333,7 +330,7 @@ Module.register("MMM-EUElectricityPrice", {
       const { value, time, date } = this.priceData[i];
 
       // data + labels + date
-      showData.push(value / 1000);
+      showData.push((value / 1000) * DISPLAY_FACTOR);
       showLabel.push(time[0] === '0' ? time.substring(1, 5) : time.substring(0, 5));
       showDate.push(date);
 
@@ -446,7 +443,7 @@ Module.register("MMM-EUElectricityPrice", {
         data: {
           labels: dispLabel,
           datasets: [{
-            label: `${this.config.centName}/kWh`,
+            label: `${unitLabel}/kWh`,
             type: this.config.chartType,
             data: dispData,
 
@@ -606,31 +603,55 @@ Module.register("MMM-EUElectricityPrice", {
       myChart.update('none');
     }
 
-    // --- Info strip (now, min/max, avg over displayed) ---
-    const currentValue = (this.priceData[currentHourMark].value / 1000).toFixed(2);
-    const dispAvg = dispData.length ? (dispData.reduce((a, b) => a + b, 0) / dispData.length).toFixed(2) : '--';
+// "Now" value (scaled for display)
+const currentValue = (this.priceData[currentHourMark].value / 1000 * DISPLAY_FACTOR).toFixed(d2);
 
-    // past 24h stats (raw data, regardless of resolution)
-    const past24 = this.priceData.slice(Math.max(currentHourMark - 24 * 4, 0), currentHourMark);
-    const low24 = past24.length ? (Math.min(...past24.map(i => i.value)) / 1000).toFixed(2) : '--';
-    const high24 = past24.length ? (Math.max(...past24.map(i => i.value)) / 1000).toFixed(2) : '--';
+// Average over displayed series (dispData is already scaled if you pushed with DISPLAY_FACTOR)
+const dispAvg = dispData.length
+  ? (dispData.reduce((a, b) => a + b, 0) / dispData.length).toFixed(d2)
+  : '--';
+
+// past 24h stats (raw data slice, scale for display here)
+const past24 = this.priceData.slice(Math.max(currentHourMark - 24 * 4, 0), currentHourMark);
+const low24  = past24.length ? (Math.min(...past24.map(i => i.value)) / 1000 * DISPLAY_FACTOR).toFixed(d2) : '--';
+const high24 = past24.length ? (Math.max(...past24.map(i => i.value)) / 1000 * DISPLAY_FACTOR).toFixed(d2) : '--';
+
+// --- templating + gridEnergy tag (from node_helper) ---
+const renderCustomText = (tpl, map) =>
+  tpl ? String(tpl).replace(/{{\s*(\w+)\s*}}/g, (m, k) => (k in map ? map[k] : '')) : '';
+
+const customTextRendered = renderCustomText(this.config.customText, {
+  price: currentValue,
+  avg: dispAvg,
+  low24: low24,
+  high24: high24,
+  date: currentDate,
+  time: currentTime.slice(0,5),
+  currency: this.config.currency,
+  centName: this.config.centName,
+  area: this.config.dataSource,
+  gridEnergy: gridEnergy
+});
+
+
+
 
     const infoDiv = document.createElement("div");
     infoDiv.className = 'bright';
     infoDiv.innerHTML = `
         <div style="@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap'); font-family: 'Roboto', sans-serif;">
           <span style="font-size: 1.2em; font-weight: bold;">${this.config.headText} ${this.config.showCurrency ? this.config.currency : ''}</span><br>
-          ${this.config.customText ? `<span style="font-size: 0.6em;">${this.config.customText}</span><br>` : ''}
+${this.config.customText ? `<span style="font-size: 0.6em;">${customTextRendered}</span><br>` : ''}
           <span style="font-size: 0.8em;">Now: </span>
-          <span style="font-size: 1.2em; font-weight: bold;">${currentValue}</span>
-          <span style="font-size: 0.8em;"> ${this.config.centName}/kWh</span>
+<span style="font-size: 1.2em; font-weight: bold;">${currentValue}</span>
+<span style="font-size: 0.8em;"> ${unitLabel}/kWh</span>
           <br>
           <span style="font-size: 0.6em;">
-            <span style="color: blue;">&darr;</span> ${low24} ${this.config.centName}  
+  <span style="color: blue;">&darr;</span> ${low24} ${unitLabel}
             <span style="color: #aaa;">&nbsp;&bull;&nbsp;</span> 
-            <span style="color: red;">&uarr;</span> ${high24} ${this.config.centName} 
+<span style="color: red;">&uarr;</span> ${high24} ${unitLabel}
             <span style="color: #aaa;">&nbsp;&bull;&nbsp;</span> 
-            ≈ ${dispAvg} ${this.config.centName}
+            ≈ ${dispAvg} ${unitLabel}
           </span>
         </div>
       `;

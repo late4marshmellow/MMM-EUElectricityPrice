@@ -14,7 +14,7 @@ function getJsonWithRetry(url, retries = 2, timeoutMs = DEFAULT_TIMEOUT_MS) {
 		const attempt = (n) => {
 			const req = https.get(url, (res) => {
 				if (res.statusCode < 200 || res.statusCode >= 300) {
-					res.resume(); // drain
+					res.resume();
 					return n > 0
 						? setTimeout(() => attempt(n - 1), 500 * (retries - n + 1))
 						: reject(new Error(`HTTP ${res.statusCode} for ${url}`));
@@ -44,10 +44,65 @@ function getJsonWithRetry(url, retries = 2, timeoutMs = DEFAULT_TIMEOUT_MS) {
 	});
 }
 
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function hhmmToMinutes(hhmm) {
+	const [h, m] = String(hhmm || '').split(':').map(Number);
+	if (Number.isNaN(h) || Number.isNaN(m)) return 0;
+	return h * 60 + m;
+}
+
+function getHHMMWithHourOffset(utcIso, hourOffset) {
+	const d = new Date(utcIso);
+	d.setTime(d.getTime() + (Number(hourOffset) || 0) * 60 * 60 * 1000);
+	return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function computeGridPriceAdderSubunit(utcIso, rules, hourOffset) {
+	const arr = Array.isArray(rules) ? rules : [];
+	if (arr.length === 0) return 0;
+	const hhmm = getHHMMWithHourOffset(utcIso, hourOffset);
+	const nowMin = hhmmToMinutes(hhmm);
+
+	let fallback = 0;
+	for (const r of arr) {
+		if (!r || typeof r.add !== 'number') continue;
+		if (!r.from && !r.to) { fallback = r.add; continue; }
+		const start = hhmmToMinutes(r.from || '00:00');
+		const end   = hhmmToMinutes(r.to   || '00:00');
+		if (start === end) { fallback = r.add; continue; }
+		if (start < end) {
+			if (nowMin >= start && nowMin < end) return r.add;
+		} else {
+			if (nowMin >= start || nowMin < end) return r.add;
+		}
+	}
+	return fallback;
+}
+
+function selectGridAddSubunitNow(rules) {
+	const arr = Array.isArray(rules) ? rules : [{ add: 0.00 }];
+	const fmt = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+	const hhmm = fmt.format(new Date());
+	const nowMin = hhmmToMinutes(hhmm);
+
+	let fallback = 0;
+	for (const r of arr) {
+		const add = Number(r?.add) || 0;
+		if (!r.from && !r.to) { fallback = add; continue; }
+		const start = hhmmToMinutes(r.from || '00:00');
+		const end   = hhmmToMinutes(r.to   || '00:00');
+		if (start === end) { fallback = add; continue; }
+		if (start < end) {
+			if (nowMin >= start && nowMin < end) return add;
+		} else {
+			if (nowMin >= start || nowMin < end) return add;
+		}
+	}
+	return fallback;
+}
 
 module.exports = NodeHelper.create({
-
-
 
 	socketNotificationReceived: function (notification, payload) {
 		if (notification === 'GET_PRICEDATA') {
@@ -55,28 +110,13 @@ module.exports = NodeHelper.create({
 		}
 	},
 
-	/**
-	 * Parses the loaded price data to simplify processing on the 
-	 * front-end.
-	 *
-	 * @param {Object} data - The price data.
-	 * @param {Object} payload - An object containing configuration and additional data.
-	 *    @property {Int} hourOffset - The local time offset from CET/CEST.
-	 *    @property {Double} [priceOffset=0] - The offset to be added on top of the price.
-	 *    @property {Double} [priceMultiplier=1] - The multiplier of the price. The price will be multiplied first and then offset is added.
-	 * @return {Object} The parsed price data or false, if an error occurred.
-	 */
-
 	async getPriceData(payload) {
-		console.log('getpricedata');
 		try {
-			// Always fetch today + yesterday (in parallel)
 			const [jsonToday, jsonYesterday] = await Promise.all([
 				getJsonWithRetry(payload.urlToday, 2, DEFAULT_TIMEOUT_MS),
 				getJsonWithRetry(payload.urlYesterday, 2, DEFAULT_TIMEOUT_MS)
 			]);
 
-			// Combine safely even if a field is missing
 			let combinedData = {
 				multiAreaEntries: [
 					...((jsonYesterday && jsonYesterday.multiAreaEntries) || []),
@@ -84,9 +124,6 @@ module.exports = NodeHelper.create({
 				]
 			};
 
-			// After publish time, try tomorrow as well; proceed even if it fails
-			//const now = new Date();
-			//if (now.getHours() >= payload.tomorrowDataTime && payload.urlTomorrow) {
 			if (payload.urlTomorrow) {
 				try {
 					const jsonTomorrow = await getJsonWithRetry(payload.urlTomorrow, 2, DEFAULT_TIMEOUT_MS);
@@ -98,81 +135,51 @@ module.exports = NodeHelper.create({
 				}
 			}
 
-			console.log(`Processing ${combinedData.multiAreaEntries.length} entries`);
-			this.processAndSendData(combinedData, payload);
+			const ret = this.parsePriceData(combinedData, payload);
+			const gridAddSubunit = selectGridAddSubunitNow(payload.gridPriceRules);
+			this.sendSocketNotification('PRICEDATA', {
+				priceData: ret,
+				gridAddSubunit
+			});
 		} catch (e) {
 			console.error('Fetching price data failed:', e.message);
 			this.sendSocketNotification('PRICEDATAERROR', e.message);
 		}
 	},
 
-
-	processAndSendData(data, payload) {
-		const list = Array.isArray(data?.multiAreaEntries) ? data.multiAreaEntries : [];
-		if (list.length === 0) {
-			this.sendSocketNotification('PRICEDATAERROR', 'No entries received from API');
-			return;
-		}
-		const ret = this.parsePriceData({ multiAreaEntries: list }, payload);
-		if (!Array.isArray(ret) || ret.length === 0) {
-			this.sendSocketNotification('PRICEDATAERROR', 'Parsed dataset is empty');
-		} else {
-			this.sendSocketNotification('PRICEDATA', ret);
-		}
-	},
-
-
-	/**
-	 * Parses the loaded price data to simplify processing on the front-end.
-	 *
-	 * @param {Object} data - The raw price data to be parsed.
-	 * @param {Object} payload - An object containing configuration and additional data for parsing.
-	 *    @property {Int} hourOffset - The local time offset from CET/CEST.
-	 *    @property {Double} [priceOffset=0] - The offset to be added on top of the price.
-	 *    @property {Double} [priceMultiplier=1] - The multiplier of the price. The price will be multiplied first and then offset is added.
-	 *    @property {String} dataSource - Identifier for the desired data source.
-	 *    @property {Array} validDataSources - List of valid data sources.
-	 * @return {Object|Array} The parsed price data, an array of processed data, or an error object if an issue occurs.
-	 */
 	parsePriceData(data, payload) {
-		console.log('Start dataparse');
 		let ret = [];
 
 		if (!payload.validDataSources.includes(payload.dataSource)) {
-			return { error: "Invalid data source." };
+			return [];
 		}
-		if (!data) return { error: "Data is missing." };
-		if (!data.multiAreaEntries) return { error: "multiAreaEntries is missing." };
+		if (!data) return [];
+		if (!data.multiAreaEntries) return [];
 
-		// Normalize config
-		const hourOffset = (typeof payload.hourOffset === 'number') ? payload.hourOffset : 0;
+		const hourOffset = (typeof payload.hourOffset === 'number')
+			? payload.hourOffset
+			: (-new Date().getTimezoneOffset() / 60);
+
 		const priceMultiplier = (typeof payload.priceMultiplier === 'number') ? payload.priceMultiplier : 1;
 		const priceOffset = (typeof payload.priceOffset === 'number') ? payload.priceOffset * 1000 : 0;
+		const gridPriceRules = Array.isArray(payload.gridPriceRules) ? payload.gridPriceRules : [{ add: 0.00 }];
 
-		// Build rows
 		for (const entry of data.multiAreaEntries) {
 			const areaData = entry.entryPerArea?.[payload.dataSource];
 			if (typeof areaData !== 'number') continue;
 
-			// price = (value * multiplier) + offset
-			const price = (areaData * priceMultiplier) + priceOffset;
+			const addSubunit = computeGridPriceAdderSubunit(entry.deliveryStart, gridPriceRules, hourOffset);
+			const addStored  = (addSubunit / 100) * 1000;
+			const price = (areaData * priceMultiplier) + priceOffset + addStored;
 
-			// deliveryStart is ISO from Nord Pool; treat it as UTC then add hourOffset
 			const dt = new Date(entry.deliveryStart);
 			dt.setTime(dt.getTime() + hourOffset * 60 * 60 * 1000);
-
 			const offsetDate = `${dt.getFullYear()}-${("0" + (dt.getMonth() + 1)).slice(-2)}-${("0" + dt.getDate()).slice(-2)}`;
 			const offsetTime = `${("0" + dt.getHours()).slice(-2)}:${("0" + dt.getMinutes()).slice(-2)}:00`;
 
-			ret.push({
-				date: offsetDate,
-				time: offsetTime,
-				value: price
-			});
+			ret.push({ date: offsetDate, time: offsetTime, value: price });
 		}
 
-		// Ensure chronological order (earliest → latest)
-		// String sort on ISO-like "YYYY-MM-DD HH:MM:SS" is safe and fast
 		ret.sort((a, b) => {
 			const ka = `${a.date} ${a.time}`;
 			const kb = `${b.date} ${b.time}`;
@@ -180,7 +187,6 @@ module.exports = NodeHelper.create({
 		});
 
 		return ret;
-	},
-
+	}
 
 });
