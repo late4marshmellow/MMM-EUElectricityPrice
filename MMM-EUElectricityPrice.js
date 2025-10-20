@@ -1,81 +1,130 @@
+// =============================
+// File: MMM-EUElectricityPrice.js
+// =============================
 /* Magic Mirror
- * Module: MMM-EUElectricityPrice
- *
- * By late4marshmellow a fork from JanneKalliola (MMM-FiElectricityPrice)
- *
- */
+* Module: MMM-EUElectricityPrice
+*
+* By late4marshmellow a fork from JanneKalliola (MMM-FiElectricityPrice)
+*
+*/
 
 Module.register("MMM-EUElectricityPrice", {
-  validDataSources: ['EE', 'LT', 'LV', 'AT', 'BE', 'FR', 'GER', 'NL', 'PL', 'DK1', 'DK2', 'FI', 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4', 'SYS'],
-  validCurrencies: ['NOK', 'SEK', 'DKK', 'PLN', 'EUR'],
+  validDataSources: ['EE', 'LT', 'LV', 'AT', 'BE', 'FR', 'DE', 'NL', 'PL', 'DK1', 'DK2', 'FI', 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4', 'RO', 'BG', 'SYS'],
+  validCurrencies: ['NOK', 'SEK', 'DKK', 'PLN', 'EUR', 'BGN', 'RON'],
   defaults: {
-    dataSource: 'NO1',
-    currency: 'NOK',
-    centName: 'øre',
-    headText: 'Electricity Price',
-    customText: '',
-    showCurrency: true,
-    tomorrowDataTime: 13,
-    tomorrowDataTimeMinute: 1,
-    errorMessage: 'Data could not be fetched.',
-    loadingMessage: 'Loading data...',
-    showPastHours: 24,
-    showFutureHours: 36,
-    totalHours: 40,
-    hourOffset: 1,
-    priceOffset: 0,
-    priceMultiplier: 1,
-    // size/position
-    width: null,
-    height: null,
-    posRight: null,
-    posDown: null,
-    // chart
-    chartType: 'bar', // 'line' | 'bar'
-    showAverage: true,
+    // ── Data source & units ───────────────────────────────────────────────
+    dataSource: 'NO1',               // Delivery area (must be in validDataSources)
+    currency: 'NOK',                 // One of validCurrencies
+    centName: 'øre',                 // Sub-unit label (e.g., "øre", "cent")
+    displayInSubunit: false,         // true → show sub-unit (øre/cent) instead of main currency
+
+    // ── Header & info text ────────────────────────────────────────────────
+    headText: 'Electricity Price',   // Top header; empty string to hide
+    customText: '',                  // Custom line template; tags: {{price}}, {{avg}}, {{low24}}, {{high24}}, {{date}}, {{time}}, {{currency}}, {{centName}}, {{area}}, {{gridEnergy}}
+    showCurrency: true,              // Append currency code in header
+
+    // ── Visibility toggles (info area) ────────────────────────────────────
+    showNowLine: true,               // Show “Now: …” line
+    currentPriceText: 'Now: ',       // Label for current price line
+    showSupportInNow: false,          // Append support (“strømstøtte”) price next to Now
+    supportText: 'with support: ',   // Label used when showing support price
+    showStatsText: true,             // Show low/high/avg line
+    showLegend: false,               // Chart legend on/off
+    
+    // ── Price calculation ────────────────────────────────────────────────
+    priceMultiplier: 1.25,           // Multiplier on raw energy (e.g., VAT 25% → 1.25)
+    priceOffset: 0,                  // Fixed add (main currency/kWh), e.g. 0.0713 for 7.13 cents
+
+    // ── Grid price rules (local time) ─────────────────────────────────────
+    gridPriceRules: [
+      { from: '06:00', to: '22:00', add: 0 }, // { from: 'HH:MM', to: 'HH:MM', add: øre/cent per kWh }
+      { from: '22:00', to: '06:00', add: 0 }  
+    ],
+
+    // ── Strømstøtte (support) overlay ────────────────────────────────────
+    showSupportLine: false,          // Toggle second line on chart
+    supportThreshold: 0.75,          // Threshold (main currency/kWh), e.g., 0.70 NOK/kWh
+    supportPercent: 0.90,            // Compensation fraction (e.g., 0.90 = 90%)
+    supportColor: '#FFD700',         // Line color
+    supportLineWidth: 2,             // Line width
+
+    // ── Time range & resolution ───────────────────────────────────────────
+    resolution: 'hour',              // 'hour' or 'quarter'
+    showPastHours: null,             // Hours to show into the past; null fills from totalHours
+    showFutureHours: 36,             // Hours to show into the future
+    totalHours: 40,                  // Total window when showPastHours is null
+    hourOffset: 1,                   // Display offset from UTC (hours)
+
+    // ── Chart appearance ─────────────────────────────────────────────────
+    chartType: 'bar',                // 'bar' or 'line'
+    showAverage: true,               // Show average line of visible data
     averageColor: '#fff',
     showGrid: true,
     gridColor: 'rgba(255, 255, 255, 0.3)',
     labelColor: '#fff',
+
+    // Colors for bars/line segments
     pastColor: 'rgba(255, 255, 255, 0.5)',
     pastBg: 'rgba(255, 255, 255, 0.3)',
-    currentColor: '#fff',
-    currentBg: '#fff',
-    currentbgSwitch: false,
+    currentColor: '#CC7722',
+    currentBg: '#CC7722',
+    normalColor: '#3b82f6',
     futureColor: 'rgba(255, 255, 255, 0.8)',
     futureBg: 'rgba(255, 255, 255, 0.6)',
-    alertLimit: false,
-    alertValue: 100,
-    alertColor: 'rgba(255, 0, 0, 1)',
-    alertBg: 'rgba(255, 0,0, 0.8)',
-    safeLimit: false,
-    safeValue: 50,
-    safeColor: 'rgba(0, 255, 0, 1)',
-    safeBg: 'rgba(0, 255,0, 0.8)',
-    beginAtZero: true,
-    // line chart only
-    borderWidthLine: 3,
-    pointRegular: 4,   // full-hour node size (line)
-    pointCurrent: 10,  // current node size (line)
-    pointQuarter: 2,   // 15/30/45 mini nodes (line)
-    // bar chart only
-    borderWidthBar: 1,
-    // Other
-    tickInterval: false,
-    updateUIInterval: 5 * 60,
-    yDecimals: 2,
-    // Resolution switch
-    resolution: 'hour' // 'quarter' (15-min) | 'hour' (aggregate per date+hour)
-  },
+    currentbgSwitch: false,          // (kept for compatibility)
+    lineColor: null,                 // If null, uses past/futureLineColor segmentation
+    pastLineColor: 'rgba(255,255,255,0.5)',
+    futureLineColor: 'rgba(255,255,255,0.6)',
 
-  // If you use Chart.js v4, keep this path (UMD). For v3, use 'dist/chart.min.js'
+    // Point/line sizing
+    borderWidthLine: 3,
+    borderWidthBar: 1,
+    pointRegular: 4,
+    pointCurrent: 10,
+    pointQuarter: 2,
+
+    // ── Threshold coloring ───────────────────────────────────────────────
+    alertLimit: false,               // false to disable; else compare against alertValue
+    alertValue: 100,                 // If displaying subunit, enter in øre/cent; else main currency
+    alertColor: '#B22222',
+    alertBg: '#B22222',
+    safeLimit: false,                // false to disable; else compare against safeValue
+    safeValue: 50,                   // If displaying subunit, enter in øre/cent; else main currency
+    safeColor: '#228B22',
+    safeBg: '#228B22',
+
+    // ── Axes & ticks ─────────────────────────────────────────────────────
+    beginAtZero: true,
+    yDecimals: 2,
+    xLabelDiagonal: true,
+    xLabelAngle: 60,
+    xLabelPadding: 4,
+    xAutoSkip: false,
+    xMaxTicks: null,
+    xLabelEveryHours: 1,
+    tickInterval: false,
+
+    // ── Size & position ──────────────────────────────────────────────────
+    width: null,                     // e.g., '380px'
+    height: null,                    // e.g., '220px'
+    posRight: null,                  // CSS translateX
+    posDown: null,                   // CSS translateY
+
+    // ── Update & fetch behavior ──────────────────────────────────────────
+    updateUIInterval: 5 * 60,        // Seconds between UI refreshes
+    tomorrowDataTime: false,         // Or hour (0–23) to poll tomorrow’s prices
+    tomorrowDataTimeMinute: 1,       // Minute within that hour
+    errorMessage: 'Data could not be fetched.',
+    loadingMessage: 'Loading data...'
+  },
   getScripts: function () {
-  return [this.file('chart-loader.js')];
+    return [this.file('chart-loader.js')];
   },
 
   start: function () {
     this.error = false;
     this.priceData = false;
+    this.gridAddSubunit = 0;
     this.priceMetadata = {};
     this.timeout = false;
     this.schedulePriceUpdate();
@@ -88,12 +137,53 @@ Module.register("MMM-EUElectricityPrice", {
       this.timeout = false;
     }
     this.getPriceData();
-    const hour = this.config.tomorrowDataTime;
-    const minute = this.config.tomorrowDataTimeMinute;
-    const now = new Date();
-    let updateMoment = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0).getTime() - now.getTime();
-    if (updateMoment < 1000) updateMoment += 86400000;
-    this.timeout = setTimeout(() => this.schedulePriceUpdate(), updateMoment);
+
+    const manualMode = (typeof this.config.tomorrowDataTime === 'number');
+    const minutesInTZ = (tz) => {
+      const now = new Date();
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: tz,
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      }).format(now).split(':').map(Number);
+      const h = parts[0] || 0, m = parts[1] || 0;
+      return h * 60 + m;
+    };
+
+    let nextDelay;
+    const GRACE_MINUTES = 60;
+    const POLL_EVERY_MS = 5 * 60 * 1000;
+
+    if (manualMode) {
+      const now = new Date();
+      const publishTimeToday = new Date(
+        now.getFullYear(), now.getMonth(), now.getDate(),
+        this.config.tomorrowDataTime,
+        this.config.tomorrowDataTimeMinute || 0, 0, 0
+      );
+      const publishTimeTomorrow = new Date(publishTimeToday.getTime() + 24 * 60 * 60 * 1000);
+
+      if (now < publishTimeToday) {
+        nextDelay = publishTimeToday.getTime() - now.getTime();
+      } else if (now - publishTimeToday < GRACE_MINUTES * 60 * 1000) {
+        nextDelay = POLL_EVERY_MS;
+      } else {
+        nextDelay = publishTimeTomorrow.getTime() - now.getTime();
+      }
+    } else {
+      const TZ = 'Europe/Oslo';
+      const TARGET_MIN = 13 * 60;
+      const nowMin = minutesInTZ(TZ);
+      if (nowMin < TARGET_MIN) {
+        nextDelay = (TARGET_MIN - nowMin) * 60 * 1000;
+      } else if (nowMin < TARGET_MIN + GRACE_MINUTES) {
+        nextDelay = POLL_EVERY_MS;
+      } else {
+        const untilMidnight = (24 * 60 - nowMin) * 60 * 1000;
+        const toTargetTomorrow = TARGET_MIN * 60 * 1000;
+        nextDelay = untilMidnight + toTargetTomorrow;
+      }
+    }
+    this.timeout = setTimeout(() => this.schedulePriceUpdate(), nextDelay);
   },
 
   scheduleUIUpdate: function () {
@@ -104,16 +194,13 @@ Module.register("MMM-EUElectricityPrice", {
   getPriceData: function () {
     let currency = this.config.currency;
     let urlToday, urlTomorrow, urlYesterday;
-
     let today = new Date();
     let formattedToday = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
-
     let yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
     let formattedYesterday = `${yesterday.getFullYear()}-${yesterday.getMonth() + 1}-${yesterday.getDate()}`;
-    
     let tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);    
+    tomorrow.setDate(today.getDate() + 1);
     let formattedTomorrow = `${tomorrow.getFullYear()}-${tomorrow.getMonth() + 1}-${tomorrow.getDate()}`;
 
     if (!this.validCurrencies.includes(this.config.currency)) {
@@ -133,6 +220,7 @@ Module.register("MMM-EUElectricityPrice", {
       urlToday = `https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?market=DayAhead&date=${formattedToday}&currency=${currency}&deliveryArea=${this.config.dataSource}`;
       urlTomorrow = `https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?market=DayAhead&date=${formattedTomorrow}&currency=${currency}&deliveryArea=${this.config.dataSource}`;
     }
+
     this.sendSocketNotification('GET_PRICEDATA', {
       urlToday,
       urlTomorrow,
@@ -143,13 +231,25 @@ Module.register("MMM-EUElectricityPrice", {
       priceMultiplier: this.config.priceMultiplier,
       dataSource: this.config.dataSource,
       validDataSources: this.validDataSources,
+      gridPriceRules: this.config.gridPriceRules,
+      // support
+      supportThreshold: this.config.supportThreshold,
+      supportPercent: this.config.supportPercent
     });
   },
 
   socketNotificationReceived: function (notification, payload) {
     if (notification === "PRICEDATA") {
       this.error = false;
-      this.priceData = payload;
+      this.priceData = (this.config.resolution === 'hour')
+        ? (payload.priceDataHour || [])
+        : (payload.priceDataQuarter || []);
+      this.priceDataSupport = this.priceData.map(p => ({
+        date: p.date, time: p.time, value: (typeof p.supportValue === 'number' ? p.supportValue : null)
+      }));
+
+      this.gridAddSubunit = payload.gridAddSubunit;
+
       if (this.priceData.length > 0) {
         let sum = 0;
         for (let i = 0; i < this.priceData.length; i++) sum += this.priceData[i].value;
@@ -158,13 +258,13 @@ Module.register("MMM-EUElectricityPrice", {
         this.priceMetadata['average'] = false;
       }
     } else if (notification === "PRICEDATAERROR") {
-      console.log("Error:", payload);
       this.setError(`Data fetch issue: ${payload || 'Unknown error'}`);
     } else if (notification === "INVALID_DATASOURCE") {
       this.setError(payload);
     }
     this.updateDom();
   },
+
 
   setError: function (message) {
     this.error = true;
@@ -194,6 +294,15 @@ Module.register("MMM-EUElectricityPrice", {
       return wrapper;
     }
 
+    // Display grid energy from helper
+    const d2 = Math.max(0, Math.min(2, this.config.yDecimals));
+    const gridEnergy = this.config.displayInSubunit
+      ? (Math.round(this.gridAddSubunit)).toString()
+      : (this.gridAddSubunit / 100).toFixed(d2);
+
+
+
+
     // Guard: Chart.js not loaded yet
     if (typeof Chart === 'undefined') {
       wrapper.innerHTML = 'Loading chart library...';
@@ -202,9 +311,14 @@ Module.register("MMM-EUElectricityPrice", {
       return wrapper;
     }
 
-    // --- Current slot (rounded down to nearest 15 min) ---
+    // Display scaling (main vs sub-unit)
+    const DISPLAY_FACTOR = this.config.displayInSubunit ? 100 : 1;
+    // Label for axis and info strip
+    const unitLabel = this.config.displayInSubunit ? this.config.centName : this.config.currency;
+
     let now = new Date();
-    const minutesRounded = Math.floor(now.getMinutes() / 15) * 15;
+    const step = (this.config.resolution === 'hour') ? 60 : 15;
+    const minutesRounded = Math.floor(now.getMinutes() / step) * step;
     let currentSlot = new Date(
       now.getFullYear(),
       now.getMonth(),
@@ -212,9 +326,10 @@ Module.register("MMM-EUElectricityPrice", {
       now.getHours(),
       minutesRounded, 0, 0
     );
+
     currentSlot = new Date(currentSlot - currentSlot.getTimezoneOffset() * 60000).toISOString();
-    const currentDate = currentSlot.substring(0,10);
-    const currentTime = currentSlot.substring(11,19); // HH:MM:SS
+    const currentDate = currentSlot.substring(0, 10);
+    const currentTime = currentSlot.substring(11, 19); // HH:MM:SS
 
     let currentHourMark = false;
     for (let i = 0; i < this.priceData.length; i++) {
@@ -229,97 +344,100 @@ Module.register("MMM-EUElectricityPrice", {
       return wrapper;
     }
 
-    // --- Window calculation (uses existing config semantics) ---
-    let futureMark = 0;
-    let pastMark = this.priceData.length - 1;
+    // --- Window calculation (chronological arrays) ---
+    const Q = (this.config.resolution === 'hour') ? 1 : 4; // data points per hour in the chosen series
 
-    if (this.config.showFutureHours !== false) {
-      futureMark = Math.max(currentHourMark - this.config.showFutureHours*4, 0);
+    // how many quarters to show into the *future* (to the right)
+    const FUTURE_Q = (this.config.showFutureHours === false)
+      ? 0
+      : Math.max(0, Math.round(this.config.showFutureHours * Q));
+
+    // how many quarters to show into the *past* (to the left)
+    let PAST_Q;
+    if (this.config.showPastHours === false) {
+      PAST_Q = 0;
+    } else if (this.config.showPastHours === null || this.config.showPastHours === 0) {
+      // default: fill up to totalHours
+      const totalQ = Math.max(0, Math.round((this.config.totalHours || 0) * Q));
+      PAST_Q = Math.max(0, totalQ - FUTURE_Q); // remaining quarters go to the past
+    } else {
+      PAST_Q = Math.max(0, Math.round(this.config.showPastHours * Q));
     }
 
-    let showPastHours = this.config.showPastHours*4;
-    if (showPastHours === null) {
-      showPastHours = this.config.totalHours*4 - (currentHourMark - futureMark);
-      showPastHours = Math.max(showPastHours, 0);
-    }
-    if (showPastHours !== false) {
-      pastMark = Math.min(currentHourMark + showPastHours, this.priceData.length - 1);
-    }
+    // compute window [startIdx..endIdx]
+    const startIdx = Math.max(0, currentHourMark - PAST_Q);
+    const endIdx = Math.min(this.priceData.length - 1, currentHourMark + FUTURE_Q);
+
 
     // --- Build base arrays (quarters) ---
-    const showData  = [];
+    const showData = [];
     const showLabel = [];
     const showColor = [];
-    const showBg    = [];
-    const showDate  = []; // track date for hourly aggregation
+    const showBg = [];
+    const showDate = []; // track date for hourly aggregation
+    const supportData = []; // parallel to showData for support line
 
+
+    const toDisplay = (subunitVal) => this.config.displayInSubunit ? subunitVal : (Number(subunitVal) / 100);
     let alertValue = null;
     let safeValue = null;
     if (this.config.alertLimit !== false) {
-      alertValue = (this.config.alertValue == 'average') ? this.priceMetadata['average'] : this.config.alertValue * 1000;
+      alertValue = (this.config.alertValue === 'average')
+        ? ((this.priceMetadata['average'] || 0) * DISPLAY_FACTOR)   // average already per kWh -> scale to display
+        : toDisplay(Number(this.config.alertValue));                 // numeric config in øre -> convert to display units
     }
     if (this.config.safeLimit !== false) {
-      safeValue = (this.config.safeValue == 'average') ? this.priceMetadata['average'] : this.config.safeValue * 1000;
+      safeValue = (this.config.safeValue === 'average')
+        ? ((this.priceMetadata['average'] || 0) * DISPLAY_FACTOR)
+        : toDisplay(Number(this.config.safeValue));
     }
 
-    for (let i = futureMark; i <= pastMark; i++) {
+    for (let i = startIdx; i <= endIdx; i++) {
       const { value, time, date } = this.priceData[i];
-      // data
-      showData.unshift(value / 1000);
-      // labels "H:MM" or "HH:MM"
-      showLabel.unshift(time[0] === '0' ? time.substring(1,5) : time.substring(0,5));
-      // date
-      showDate.unshift(date);
-      // colors/bg
-      if (i === currentHourMark) {
-        showColor.unshift(this.config.currentColor);
-        showBg.unshift(this.config.currentbgSwitch ? this.config.currentBg : this.config.futureBg);
-      } else if (i > currentHourMark) {
-        showColor.unshift(this.config.pastColor);
-        showBg.unshift(this.config.pastBg);
-      } else if (this.config.alertLimit !== false && value > alertValue) {
-        showColor.unshift(this.config.alertColor);
-        showBg.unshift(this.config.alertBg);
-      } else if (this.config.safeLimit !== false && value < safeValue) {
-        showColor.unshift(this.config.safeColor);
-        showBg.unshift(this.config.safeBg);
+
+      // ⚡ final price (base + offset + grid) is already in value
+      const displayVal = value * DISPLAY_FACTOR;
+
+      showData.push(displayVal);
+      showLabel.push(time[0] === '0' ? time.substring(1, 5) : time.substring(0, 5));
+      showDate.push(date);
+      // support track (if present)
+      if (this.config.showSupportLine && this.priceDataSupport && this.priceDataSupport[i] && typeof this.priceDataSupport[i].value === 'number') {
+        supportData.push(this.priceDataSupport[i].value * DISPLAY_FACTOR);
       } else {
-        showColor.unshift(this.config.futureColor);
-        showBg.unshift(this.config.futureBg);
+        supportData.push(null); // keep indexes aligned
+      }
+
+      if (i === currentHourMark) {
+        showColor.push(this.config.currentColor);
+        showBg.push(this.config.futureBg);
+      } else if (i < currentHourMark) {
+        showColor.push(this.config.pastColor);
+        showBg.push(this.config.pastBg);
+      } else {
+        if (this.config.alertLimit !== false && displayVal > alertValue) {
+          showColor.push(this.config.alertColor);
+          showBg.push(this.config.alertBg);
+        } else if (this.config.safeLimit !== false && displayVal < safeValue) {
+          showColor.push(this.config.safeColor);
+          showBg.push(this.config.safeBg);
+        } else {
+          showColor.push(this.config.normalColor);
+          showBg.push(this.config.futureBg);
+        }
       }
     }
+
+
 
     // ---- Resolution switch ----
-    let dispData  = showData.slice();
+    let dispData = showData.slice();
     let dispLabel = showLabel.slice();
     let dispColor = showColor.slice();
-    let dispBg    = showBg.slice();
-    let dispDate  = showDate.slice();
+    let dispBg = showBg.slice();
+    let dispDate = showDate.slice();
 
     const hourOnly = (lbl) => String(lbl).split(':')[0].padStart(2, '0') + ':00';
-
-    if (this.config.resolution === 'hour') {
-      // Aggregate by DATE + HOUR
-      const buckets = {}; // key "YYYY-MM-DD HH:00" -> { sum, n, color, bg }
-      const order   = []; // preserve first-seen order
-
-      for (let idx = 0; idx < dispLabel.length; idx++) {
-        const keyHour = hourOnly(dispLabel[idx]);
-        const key     = `${dispDate[idx]} ${keyHour}`;
-        if (!buckets[key]) {
-          buckets[key] = { sum: 0, n: 0, color: dispColor[idx], bg: dispBg[idx] };
-          order.push(key);
-        }
-        buckets[key].sum += dispData[idx];
-        buckets[key].n   += 1;
-      }
-
-      dispLabel = order.map(k => k.slice(11));      // "HH:00" for axis
-      dispData  = order.map(k => buckets[k].sum / buckets[k].n);
-      dispColor = order.map(k => buckets[k].color);
-      dispBg    = order.map(k => buckets[k].bg);
-      dispDate  = order.map(k => k.slice(0,10));    // keep date for current marker
-    }
 
     // --- Chart DOM ---
     const chart = document.createElement("div");
@@ -329,7 +447,7 @@ Module.register("MMM-EUElectricityPrice", {
     // Average line across displayed data
     let averageSet = {};
     if (this.config.showAverage) {
-      const sumDisp = dispData.reduce((a,b)=>a+b,0);
+      const sumDisp = dispData.reduce((a, b) => a + b, 0);
       const avgDisp = dispData.length ? sumDisp / dispData.length : 0;
       averageSet = {
         type: 'line',
@@ -340,7 +458,8 @@ Module.register("MMM-EUElectricityPrice", {
         fill: false,
         pointRadius: 0,
         order: 1,
-        datalabels: { display: false }
+        datalabels: { display: false },
+
       };
     }
 
@@ -350,26 +469,80 @@ Module.register("MMM-EUElectricityPrice", {
 
     const self = this;
     const borderWidth = (this.config.chartType === 'line') ? this.config.borderWidthLine : this.config.borderWidthBar;
+    const diagonal = !!this.config.xLabelDiagonal;
+    const angle = Math.max(0, Math.min(90, this.config.xLabelAngle || 60));
+    // prepare support dataset (use local supportData aligned with dispLabel)
+    const supportDataset = (this.config.showSupportLine)
+      ? [{
+        type: 'line',
+        label: 'Strømstøtte',
+        data: supportData,
+        borderColor: this.config.supportColor,
+        color: this.config.supportColor,
+        borderWidth: this.config.supportLineWidth,
+        pointRadius: 0,
+        fill: false,
+        order: 3,           // draw ABOVE main (2) and average (1)
+        datalabels: { display: false }
+      }]
+      : [];
+
 
     // Build chart (guarded)
     let myChart = null;
+
     try {
       myChart = new Chart(canvas, {
         type: this.config.chartType,
         data: {
           labels: dispLabel,
           datasets: [{
-            label: `${this.config.centName}/kWh`,
+            label: `${unitLabel}/kWh`,
             type: this.config.chartType,
             data: dispData,
-            backgroundColor: dispBg,
-            borderColor: dispColor,
+
+            backgroundColor: this.config.chartType === 'line' ? 'rgba(0,0,0,0)' : dispBg,
+            borderColor: this.config.chartType === 'line'
+              ? (this.config.lineColor || this.config.futureLineColor)
+              : dispColor,
             borderWidth: borderWidth,
             barPercentage: 0.75,
             order: 2,
-            datalabels: { display: false }
-          }].concat(this.config.showAverage ? [averageSet] : [])
+            datalabels: { display: false },
+
+            // node colors
+            pointBackgroundColor: this.config.chartType === 'line' ? dispColor : undefined,
+            pointBorderColor: this.config.chartType === 'line' ? dispColor : undefined,
+
+            // ✅ segment belongs here (inside dataset)
+            segment: (this.config.chartType === 'line' && !this.config.lineColor) ? {
+              borderColor: (ctx) => {
+                const i = ctx.p0DataIndex;
+                let currentDispIndex;
+
+                if (this.config.resolution === 'quarter') {
+                  // AFTER (chronological arrays)
+                  currentDispIndex = (currentHourMark - startIdx);
+                } else {
+                  // your existing hour-mode findIndex stays as-is
+                  const hourOnly = (lbl) => String(lbl).split(':')[0].padStart(2, '0') + ':00';
+                  const currentHourLabel = hourOnly(showLabel[currentHourMark - startIdx]);
+                  const currentDateStr = showDate[currentHourMark - startIdx];
+                  currentDispIndex = dispLabel.findIndex((lbl, idx) =>
+                    (dispDate[idx] === currentDateStr && lbl === currentHourLabel)
+                  );
+                  if (currentDispIndex < 0) currentDispIndex = 0;
+                }
+
+                return (i < currentDispIndex) ? this.config.pastLineColor : this.config.futureLineColor;
+              }
+            } : undefined
+
+          }]
+            .concat(this.config.showAverage ? [averageSet] : [])
+            .concat(supportDataset)
         },
+
         options: {
           scales: {
             y: {
@@ -377,7 +550,7 @@ Module.register("MMM-EUElectricityPrice", {
               beginAtZero: this.config.beginAtZero,
               ticks: {
                 color: this.config.labelColor,
-                callback: function(value) {
+                callback: function (value) {
                   const d = Math.max(0, Math.min(2, self.config.yDecimals));
                   return Number(value).toFixed(d);
                 }
@@ -386,13 +559,37 @@ Module.register("MMM-EUElectricityPrice", {
             x: {
               ticks: {
                 color: this.config.labelColor,
-                autoSkip: (this.config.resolution === 'hour'),
-                maxTicksLimit: (this.config.resolution === 'hour') ? 12 : undefined,
+
+                // Control autoskip & density
+                autoSkip: !!this.config.xAutoSkip,
+                maxTicksLimit: (typeof this.config.xMaxTicks === 'number')
+                  ? this.config.xMaxTicks
+                  : (this.config.resolution === 'hour' ? 24 : undefined),
+
+                // Rotate (your diagonal settings)
+                maxRotation: diagonal ? angle : 0,
+                minRotation: diagonal ? angle : 0,
+                padding: this.config.xLabelPadding ?? 4,
+                align: diagonal ? 'end' : 'center',
+
+                // Decide which labels to render
                 callback: function (value) {
-                  const val = this.getLabelForValue(value);
-                  if (self.config.resolution === 'hour') return val; // already HH:00
-                  const mm = typeof val === 'string' ? val.slice(-2) : '';
-                  return (mm === '00') ? val : '';
+                  const val = this.getLabelForValue(value); // e.g. "HH:MM"
+                  const step = Math.max(1, Number(self.config.xLabelEveryHours || 1));
+
+                  if (self.config.resolution === 'hour') {
+                    // labels are "HH:00"
+                    const hh = parseInt(String(val).slice(0, 2), 10);
+                    return (hh % step === 0) ? val : '';
+                  } else {
+                    // quarter resolution: only label full hours that match step
+                    // existing behavior keeps only HH:00; now also apply modulo step
+                    if (typeof val !== 'string') return '';
+                    const isFullHour = val.slice(-2) === '00';
+                    if (!isFullHour) return '';
+                    const hh = parseInt(val.slice(0, 2), 10);
+                    return (hh % step === 0) ? val : '';
+                  }
                 }
               },
               grid: this.config.showGrid ? {
@@ -413,18 +610,18 @@ Module.register("MMM-EUElectricityPrice", {
           },
           animation: false,
           plugins: {
-            legend: { display: false },
+            legend: { display: this.config.showLegend },
             tooltip: (this.config.chartType === 'line' && this.config.resolution === 'quarter')
               ? {
-                  filter: (ctx) => {
-                    const lbl = ctx.label || '';
-                    const mm = typeof lbl === 'string' ? lbl.slice(-2) : '';
-                    const currentIdxDisplayed = (pastMark - currentHourMark);
-                    const isCurrent = ctx.dataIndex === currentIdxDisplayed;
-                    const isHour = (mm === '00');
-                    return isHour || isCurrent;
-                  }
+                filter: (ctx) => {
+                  const lbl = ctx.label || '';
+                  const mm = typeof lbl === 'string' ? lbl.slice(-2) : '';
+                  const currentIdxDisplayed = (currentHourMark - startIdx);
+                  const isCurrent = ctx.dataIndex === currentIdxDisplayed;
+                  const isHour = (mm === '00');
+                  return isHour || isCurrent;
                 }
+              }
               : {}
           }
         }
@@ -441,16 +638,16 @@ Module.register("MMM-EUElectricityPrice", {
     if (this.config.chartType === 'line') {
       let pointSizes = [];
       if (this.config.resolution === 'quarter') {
-        const currentIdxDisplayed = (pastMark - currentHourMark);
+        const currentIdxDisplayed = (currentHourMark - startIdx);
         pointSizes = dispLabel.map((lbl, idx) => {
           const mm = String(lbl).slice(-2);
           if (idx === currentIdxDisplayed) return this.config.pointCurrent; // current big
-          if (mm === '00')                return this.config.pointRegular;  // full-hour node
+          if (mm === '00') return this.config.pointRegular;  // full-hour node
           return this.config.pointQuarter;                                  // mini nodes
         });
       } else { // hour mode
-        const currentHourLabel = hourOnly(showLabel[pastMark - currentHourMark]); // "HH:00"
-        const currentDateStr   = showDate[pastMark - currentHourMark];            // "YYYY-MM-DD"
+        const currentHourLabel = hourOnly(showLabel[currentHourMark - startIdx]); // "HH:00"
+        const currentDateStr = showDate[currentHourMark - startIdx];            // "YYYY-MM-DD"
         pointSizes = dispLabel.map((lbl, idx) =>
           (dispDate[idx] === currentDateStr && lbl === currentHourLabel)
             ? this.config.pointCurrent
@@ -461,32 +658,78 @@ Module.register("MMM-EUElectricityPrice", {
       myChart.update('none');
     }
 
-    // --- Info strip (now, min/max, avg over displayed) ---
-    const currentValue = (this.priceData[currentHourMark].value / 1000).toFixed(2);
-    const dispAvg = dispData.length ? (dispData.reduce((a,b)=>a+b,0) / dispData.length).toFixed(2) : '--';
+    const currentValue = (this.priceData[currentHourMark].value * DISPLAY_FACTOR).toFixed(d2);
+    // support “Now”
+    const currentSupportValue = (
+      this.config.showSupportInNow &&
+      this.priceDataSupport &&
+      this.priceDataSupport[currentHourMark] &&
+      typeof this.priceDataSupport[currentHourMark].value === 'number'
+    ) ? (this.priceDataSupport[currentHourMark].value * DISPLAY_FACTOR).toFixed(d2) : null;
 
-    // past 24h stats (raw data, regardless of resolution)
-    const past24 = this.priceData.slice(Math.max(currentHourMark - 24*4, 0), currentHourMark);
-    const low24 = past24.length ? (Math.min(...past24.map(i=>i.value)) / 1000).toFixed(2) : '--';
-    const high24 = past24.length ? (Math.max(...past24.map(i=>i.value)) / 1000).toFixed(2) : '--';
+
+    // Average over displayed series (dispData is already scaled if you pushed with DISPLAY_FACTOR)
+    const dispAvg = dispData.length
+      ? (dispData.reduce((a, b) => a + b, 0) / dispData.length).toFixed(d2)
+      : '--';
+
+    // past 24h stats (raw data slice, scale for display here)
+    const past24 = this.priceData.slice(Math.max(currentHourMark - 24 * 4, 0), currentHourMark);
+    const low24 = past24.length ? (Math.min(...past24.map(i => i.value)) * DISPLAY_FACTOR).toFixed(d2) : '--';
+    const high24 = past24.length ? (Math.max(...past24.map(i => i.value)) * DISPLAY_FACTOR).toFixed(d2) : '--';
+
+    // --- templating + gridEnergy tag (from node_helper) ---
+    const renderCustomText = (tpl, map) =>
+      tpl ? String(tpl).replace(/{{\s*(\w+)\s*}}/g, (m, k) => (k in map ? map[k] : '')) : '';
+
+    const customTextRendered = renderCustomText(this.config.customText, {
+      price: currentValue,
+      avg: dispAvg,
+      low24: low24,
+      high24: high24,
+      date: currentDate,
+      time: currentTime.slice(0, 5),
+      currency: this.config.currency,
+      centName: this.config.centName,
+      area: this.config.dataSource,
+      gridEnergy: gridEnergy,
+    });
+
+
+
 
     const infoDiv = document.createElement("div");
     infoDiv.className = 'bright';
+    const headerHtml = this.config.headText
+      ? `<span style="font-size: 1.2em; font-weight: bold;">${this.config.headText} ${this.config.showCurrency ? this.config.currency : ''}</span><br>`
+      : '';
+    const customHtml = this.config.customText
+      ? `<span style="font-size: 0.6em;">${customTextRendered}</span><br>`
+      : '';
+    const nowHtml = this.config.showNowLine ? `
+      <span style="font-size: 0.8em;">${this.config.currentPriceText} </span>
+      <span style="font-size: 1.2em; font-weight: bold;">${currentValue}</span>
+      <span style="font-size: 0.8em;"> ${unitLabel}/kWh</span>
+      ${currentSupportValue !== null ? `
+        <span style="font-size: 0.8em;"> &nbsp; (${this.config.supportText} </span>
+        <span style="font-size: 1.0em; font-weight: bold;">${currentSupportValue}</span>
+        <span style="font-size: 0.8em;"> ${unitLabel}/kWh)</span>` : ``}
+      <br>` : '';
+    const statsHtml = this.config.showStatsText ? `
+      <span style="font-size: 0.6em;">
+        <span style="color: blue;">&darr;</span> ${low24} ${unitLabel}
+        <span style="color: #aaa;">&nbsp;&bull;&nbsp;</span>
+        <span style="color: red;">&uarr;</span> ${high24} ${unitLabel}
+        <span style="color: #aaa;">&nbsp;&bull;&nbsp;</span>
+        ≈ ${dispAvg} ${unitLabel}
+      </span>` : '';
+
     infoDiv.innerHTML = `
       <div style="@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap'); font-family: 'Roboto', sans-serif;">
-        <span style="font-size: 1.2em; font-weight: bold;">${this.config.headText} ${this.config.showCurrency ? this.config.currency : ''}</span><br>
-        ${this.config.customText ? `<span style="font-size: 0.6em;">${this.config.customText}</span><br>` : ''}
-        <span style="font-size: 0.8em;">Now: </span>
-        <span style="font-size: 1.2em; font-weight: bold;">${currentValue}</span>
-        <span style="font-size: 0.8em;"> ${this.config.centName}/kWh</span>
-        <br>
-        <span style="font-size: 0.6em;">
-          <span style="color: blue;">&darr;</span> ${low24} ${this.config.centName}  
-          <span style="color: #aaa;">&nbsp;&bull;&nbsp;</span> 
-          <span style="color: red;">&uarr;</span> ${high24} ${this.config.centName} 
-          <span style="color: #aaa;">&nbsp;&bull;&nbsp;</span> 
-          ≈ ${dispAvg} ${this.config.centName}
-        </span>
+        ${headerHtml}
+        ${customHtml}
+        ${nowHtml}
+        ${statsHtml}
       </div>
     `;
 
