@@ -6,13 +6,18 @@ A **MagicMirror²** module that shows **Nord Pool day-ahead electricity prices**
 It fetches prices once at startup and again daily, then renders a bar or line chart with optional average line and visual highlights for cheap/expensive hours. 
 Supports both hourly and 15-minute (quarter-hour) resolutions.
 
-## Bar chart
-![Screenshot](barchart.png "Screenshot")
-
-
-
 ## Line chart
-![Screenshot](linechart.png "Screenshot")
+![Screenshot](line.png "Screenshot")
+
+
+
+## Bar chart
+![Screenshot](bar-without-price.png "Screenshot")
+
+
+
+## Chart with price
+![Screenshot](bar-with-price.png "Screenshot")
 
 
 ## Installation

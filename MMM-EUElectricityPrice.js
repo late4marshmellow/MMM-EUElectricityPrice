@@ -1,14 +1,15 @@
 Module.register("MMM-EUElectricityPrice", {
-  validDataSources: ['EE', 'LT', 'LV', 'AT', 'BE', 'FR', 'DE', 'NL', 'PL', 'DK1', 'DK2', 'FI', 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4', 'SYS'],
-  validCurrencies: ['NOK', 'SEK', 'DKK', 'PLN', 'EUR'],
+  validDataSources: ['EE', 'LT', 'LV', 'AT', 'BE', 'FR', 'DE', 'NL', 'PL', 'DK1', 'DK2', 'FI', 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4', 'RO','BG','SYS'],
+  validCurrencies: ['NOK', 'SEK', 'DKK', 'PLN', 'EUR', 'BGN', 'RON'],
   defaults: {
-    dataSource: 'NO1',
-    currency: 'NOK',
-    centName: 'øre',
+    dataSource: 'NO1', // use area code from validDataSources
+    currency: 'NOK', // NOK, SEK, DKK, PLN, EUR, BGN, RON
+    centName: 'øre', // name of sub-unit for display, e.g. "øre" for NOK or "cent" for EUR
     displayInSubunit: false,
-    headText: 'Electricity Price',
-    customText: '',
+    headText: 'Electricity Price', // main header text, blank for none
+    customText: '', // template for custom info line, // supports tags: {{price}}, {{avg}}, {{low24}}, {{high24}}, {{date}}, {{time}}, {{currency}}, {{centName}}, {{area}}, {{gridEnergy}}
     showCurrency: true,
+    showLegend: false, // toggle legend on/off
     tomorrowDataTime: false,
     tomorrowDataTimeMinute: 1,
     errorMessage: 'Data could not be fetched.',
@@ -17,8 +18,9 @@ Module.register("MMM-EUElectricityPrice", {
     showFutureHours: 36,
     totalHours: 40,
     hourOffset: 1,
-    priceOffset: 0,
-    priceMultiplier: 1,
+    priceOffset: 0, // e.g. 10 for adding 0.10 currency sub-units to base price
+    priceMultiplier: 1.25, // e.g. 1.25 for 25% tax, added to base price
+    // grid price addition/subtraction rules (time in local area time)
     gridPriceRules: [
       { from: '06:00', to: '22:00', add: 47.66 },
       { from: '22:00', to: '06:00', add: 32.66 }
@@ -67,7 +69,23 @@ Module.register("MMM-EUElectricityPrice", {
     xLabelPadding: 4,
     xAutoSkip: false,
     xMaxTicks: null,
-    xLabelEveryHours: 1
+    xLabelEveryHours: 1,
+        // --- strømstøtte (support) ---
+    showSupportLine: false,       // toggle on/off
+    supportThreshold: 0.70,       // currency/kWh (e.g., 0.70 NOK/kWh)
+    supportPercent: 0.90,         // 90% in Norway
+    supportColor: '#FFD700',      // gold
+    supportLineWidth: 2,
+        xLabelEveryHours: 1,
+
+    // visibility toggles
+    showNowLine: true,            // toggle “Now: …”
+    showStatsLine: true,          // toggle low/high/avg strip
+    showSupportInNow: true,       // show support value next to Now
+    supportText: 'with support: ', // template for support info in Now line
+    currentPriceText: 'Now: ', // template for current price line
+
+
   },
 
   getScripts: function () {
@@ -174,25 +192,35 @@ Module.register("MMM-EUElectricityPrice", {
       urlTomorrow = `https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?market=DayAhead&date=${formattedTomorrow}&currency=${currency}&deliveryArea=${this.config.dataSource}`;
     }
 
-    this.sendSocketNotification('GET_PRICEDATA', {
-      urlToday,
-      urlTomorrow,
-      urlYesterday,
-      tomorrowDataTime: this.config.tomorrowDataTime,
-      hourOffset: this.config.hourOffset,
-      priceOffset: this.config.priceOffset,
-      priceMultiplier: this.config.priceMultiplier,
-      dataSource: this.config.dataSource,
-      validDataSources: this.validDataSources,
-      gridPriceRules: this.config.gridPriceRules
-    });
+      this.sendSocketNotification('GET_PRICEDATA', {
+        urlToday,
+        urlTomorrow,
+        urlYesterday,
+        tomorrowDataTime: this.config.tomorrowDataTime,
+        hourOffset: this.config.hourOffset,
+        priceOffset: this.config.priceOffset,
+        priceMultiplier: this.config.priceMultiplier,
+        dataSource: this.config.dataSource,
+        validDataSources: this.validDataSources,
+        gridPriceRules: this.config.gridPriceRules,
+        // support
+        supportThreshold: this.config.supportThreshold,
+        supportPercent: this.config.supportPercent
+      });
   },
 
   socketNotificationReceived: function (notification, payload) {
     if (notification === "PRICEDATA") {
       this.error = false;
-      this.priceData = payload.priceData;
+      this.priceData = (this.config.resolution === 'hour')
+        ? (payload.priceDataHour || [])
+        : (payload.priceDataQuarter || []);
+      this.priceDataSupport = this.priceData.map(p => ({
+        date: p.date, time: p.time, value: (typeof p.supportValue === 'number' ? p.supportValue : null)
+      }));
+
       this.gridAddSubunit = payload.gridAddSubunit;
+
       if (this.priceData.length > 0) {
         let sum = 0;
         for (let i = 0; i < this.priceData.length; i++) sum += this.priceData[i].value;
@@ -207,6 +235,7 @@ Module.register("MMM-EUElectricityPrice", {
     }
     this.updateDom();
   },
+
 
   setError: function (message) {
     this.error = true;
@@ -258,9 +287,9 @@ const DISPLAY_FACTOR = this.config.displayInSubunit ? 100 : 1;
 // Label for axis and info strip
 const unitLabel = this.config.displayInSubunit ? this.config.centName : this.config.currency;
 
-    // --- Current slot (rounded down to nearest 15 min) ---
     let now = new Date();
-    const minutesRounded = Math.floor(now.getMinutes() / 15) * 15;
+    const step = (this.config.resolution === 'hour') ? 60 : 15;
+    const minutesRounded = Math.floor(now.getMinutes() / step) * step;
     let currentSlot = new Date(
       now.getFullYear(),
       now.getMonth(),
@@ -268,6 +297,7 @@ const unitLabel = this.config.displayInSubunit ? this.config.centName : this.con
       now.getHours(),
       minutesRounded, 0, 0
     );
+
     currentSlot = new Date(currentSlot - currentSlot.getTimezoneOffset() * 60000).toISOString();
     const currentDate = currentSlot.substring(0, 10);
     const currentTime = currentSlot.substring(11, 19); // HH:MM:SS
@@ -286,7 +316,7 @@ const unitLabel = this.config.displayInSubunit ? this.config.centName : this.con
     }
 
     // --- Window calculation (chronological arrays) ---
-    const Q = 4; // quarters per hour
+    const Q = (this.config.resolution === 'hour') ? 1 : 4; // data points per hour in the chosen series
 
     // how many quarters to show into the *future* (to the right)
     const FUTURE_Q = (this.config.showFutureHours === false)
@@ -316,25 +346,38 @@ const unitLabel = this.config.displayInSubunit ? this.config.centName : this.con
     const showColor = [];
     const showBg = [];
     const showDate = []; // track date for hourly aggregation
+    const supportData = []; // parallel to showData for support line
 
+
+    const toDisplay = (subunitVal) => this.config.displayInSubunit ? subunitVal : (Number(subunitVal) / 100);
     let alertValue = null;
     let safeValue = null;
     if (this.config.alertLimit !== false) {
-      alertValue = (this.config.alertValue == 'average') ? this.priceMetadata['average'] : this.config.alertValue * 10;
+      alertValue = (this.config.alertValue === 'average')
+        ? ((this.priceMetadata['average'] || 0) * DISPLAY_FACTOR)   // average already per kWh -> scale to display
+        : toDisplay(Number(this.config.alertValue));                 // numeric config in øre -> convert to display units
     }
     if (this.config.safeLimit !== false) {
-      safeValue = (this.config.safeValue == 'average') ? this.priceMetadata['average'] : this.config.safeValue * 10;
+      safeValue = (this.config.safeValue === 'average')
+        ? ((this.priceMetadata['average'] || 0) * DISPLAY_FACTOR)
+        : toDisplay(Number(this.config.safeValue));
     }
 
 for (let i = startIdx; i <= endIdx; i++) {
   const { value, time, date } = this.priceData[i];
 
   // ⚡ final price (base + offset + grid) is already in value
-  const displayVal = (value / 1000) * DISPLAY_FACTOR;
+  const displayVal = value * DISPLAY_FACTOR;
 
   showData.push(displayVal);
   showLabel.push(time[0] === '0' ? time.substring(1, 5) : time.substring(0, 5));
   showDate.push(date);
+  // support track (if present)
+  if (this.config.showSupportLine && this.priceDataSupport && this.priceDataSupport[i] && typeof this.priceDataSupport[i].value === 'number') {
+    supportData.push(this.priceDataSupport[i].value * DISPLAY_FACTOR);
+  } else {
+    supportData.push(null); // keep indexes aligned
+  }
 
   if (i === currentHourMark) {
     showColor.push(this.config.currentColor);
@@ -367,43 +410,6 @@ for (let i = startIdx; i <= endIdx; i++) {
 
     const hourOnly = (lbl) => String(lbl).split(':')[0].padStart(2, '0') + ':00';
 
-    if (this.config.resolution === 'hour') {
-      // Aggregate by DATE + HOUR
-      const buckets = {}; // key "YYYY-MM-DD HH:00" -> { sum, n, color, bg }
-      const order = []; // preserve first-seen order
-
-      for (let idx = 0; idx < dispLabel.length; idx++) {
-        const keyHour = hourOnly(dispLabel[idx]);
-        const key = `${dispDate[idx]} ${keyHour}`;
-        if (!buckets[key]) {
-          buckets[key] = { sum: 0, n: 0, color: dispColor[idx], bg: dispBg[idx] };
-          order.push(key);
-        }
-        buckets[key].sum += dispData[idx];
-        buckets[key].n += 1;
-      }
-
-      dispLabel = order.map(k => k.slice(11));      // "HH:00" for axis
-      dispData = order.map(k => buckets[k].sum / buckets[k].n);
-      dispDate = order.map(k => k.slice(0, 10));    // keep date for current marker
-
-      const currentHourLabelAgg = hourOnly(showLabel[currentHourMark - startIdx]);
-      const currentDateStrAgg = showDate[currentHourMark - startIdx];
-      let currentDispIndex = dispLabel.findIndex((lbl, idx) =>
-        dispDate[idx] === currentDateStrAgg && lbl === currentHourLabelAgg
-      );
-      if (currentDispIndex < 0) currentDispIndex = 0;
-
-      dispColor = dispData.map((val, idx) => {
-        const raw = val * 1000;
-        if (idx === currentDispIndex) return this.config.currentColor;
-        if (idx < currentDispIndex) return this.config.pastColor;
-        if (this.config.alertLimit !== false && raw > alertValue) return this.config.alertColor;
-        if (this.config.safeLimit !== false && raw < safeValue) return this.config.safeColor;
-        return this.config.normalColor;
-      });
-    }
-
     // --- Chart DOM ---
     const chart = document.createElement("div");
     chart.className = 'small light';
@@ -434,10 +440,28 @@ for (let i = startIdx; i <= endIdx; i++) {
 
     const self = this;
     const borderWidth = (this.config.chartType === 'line') ? this.config.borderWidthLine : this.config.borderWidthBar;
-    const diagonal = !!this.config.xLabelDiagonal;
+        const diagonal = !!this.config.xLabelDiagonal;
     const angle = Math.max(0, Math.min(90, this.config.xLabelAngle || 60));
+    // prepare support dataset (use local supportData aligned with dispLabel)
+    const supportDataset = (this.config.showSupportLine)
+      ? [{
+          type: 'line',
+          label: 'Strømstøtte',
+          data: supportData,
+          borderColor: this.config.supportColor,
+          color: this.config.supportColor,
+          borderWidth: this.config.supportLineWidth,
+          pointRadius: 0,
+          fill: false,
+          order: 3,           // draw ABOVE main (2) and average (1)
+          datalabels: { display: false }
+        }]
+      : [];
+
+
     // Build chart (guarded)
     let myChart = null;
+    
     try {
       myChart = new Chart(canvas, {
         type: this.config.chartType,
@@ -487,6 +511,7 @@ for (let i = startIdx; i <= endIdx; i++) {
 
           }]
             .concat(this.config.showAverage ? [averageSet] : [])
+            .concat(supportDataset)
         },
 
         options: {
@@ -556,7 +581,7 @@ for (let i = startIdx; i <= endIdx; i++) {
           },
           animation: false,
           plugins: {
-            legend: { display: false },
+            legend: { display: this.config.showLegend },
             tooltip: (this.config.chartType === 'line' && this.config.resolution === 'quarter')
               ? {
                 filter: (ctx) => {
@@ -604,8 +629,15 @@ for (let i = startIdx; i <= endIdx; i++) {
       myChart.update('none');
     }
 
-// "Now" value (scaled for display)
-const currentValue = (this.priceData[currentHourMark].value / 1000 * DISPLAY_FACTOR).toFixed(d2);
+const currentValue = (this.priceData[currentHourMark].value * DISPLAY_FACTOR).toFixed(d2);
+// support “Now”
+const currentSupportValue = (
+  this.config.showSupportInNow &&
+  this.priceDataSupport &&
+  this.priceDataSupport[currentHourMark] &&
+  typeof this.priceDataSupport[currentHourMark].value === 'number'
+) ? (this.priceDataSupport[currentHourMark].value * DISPLAY_FACTOR).toFixed(d2) : null;
+
 
 // Average over displayed series (dispData is already scaled if you pushed with DISPLAY_FACTOR)
 const dispAvg = dispData.length
@@ -614,8 +646,8 @@ const dispAvg = dispData.length
 
 // past 24h stats (raw data slice, scale for display here)
 const past24 = this.priceData.slice(Math.max(currentHourMark - 24 * 4, 0), currentHourMark);
-const low24  = past24.length ? (Math.min(...past24.map(i => i.value)) / 1000 * DISPLAY_FACTOR).toFixed(d2) : '--';
-const high24 = past24.length ? (Math.max(...past24.map(i => i.value)) / 1000 * DISPLAY_FACTOR).toFixed(d2) : '--';
+const low24  = past24.length ? (Math.min(...past24.map(i => i.value)) * DISPLAY_FACTOR).toFixed(d2) : '--';
+const high24 = past24.length ? (Math.max(...past24.map(i => i.value)) * DISPLAY_FACTOR).toFixed(d2) : '--';
 
 // --- templating + gridEnergy tag (from node_helper) ---
 const renderCustomText = (tpl, map) =>
@@ -631,7 +663,7 @@ const customTextRendered = renderCustomText(this.config.customText, {
   currency: this.config.currency,
   centName: this.config.centName,
   area: this.config.dataSource,
-  gridEnergy: gridEnergy
+  gridEnergy: gridEnergy,
 });
 
 
@@ -639,23 +671,38 @@ const customTextRendered = renderCustomText(this.config.customText, {
 
     const infoDiv = document.createElement("div");
     infoDiv.className = 'bright';
+    const headerHtml = this.config.headText
+      ? `<span style="font-size: 1.2em; font-weight: bold;">${this.config.headText} ${this.config.showCurrency ? this.config.currency : ''}</span><br>`
+      : '';
+    const customHtml = this.config.customText
+      ? `<span style="font-size: 0.6em;">${customTextRendered}</span><br>`
+      : '';
+    const nowHtml = this.config.showNowLine ? `
+      <span style="font-size: 0.8em;">${this.config.currentPriceText} </span>
+      <span style="font-size: 1.2em; font-weight: bold;">${currentValue}</span>
+      <span style="font-size: 0.8em;"> ${unitLabel}/kWh</span>
+      ${currentSupportValue !== null ? `
+        <span style="font-size: 0.8em;"> &nbsp; (${this.config.supportText} </span>
+        <span style="font-size: 1.0em; font-weight: bold;">${currentSupportValue}</span>
+        <span style="font-size: 0.8em;"> ${unitLabel}/kWh)</span>` : ``}
+      <br>` : '';
+    const statsHtml = this.config.showStatsLine ? `
+      <span style="font-size: 0.6em;">
+        <span style="color: blue;">&darr;</span> ${low24} ${unitLabel}
+        <span style="color: #aaa;">&nbsp;&bull;&nbsp;</span>
+        <span style="color: red;">&uarr;</span> ${high24} ${unitLabel}
+        <span style="color: #aaa;">&nbsp;&bull;&nbsp;</span>
+        ≈ ${dispAvg} ${unitLabel}
+      </span>` : '';
+
     infoDiv.innerHTML = `
-        <div style="@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap'); font-family: 'Roboto', sans-serif;">
-          <span style="font-size: 1.2em; font-weight: bold;">${this.config.headText} ${this.config.showCurrency ? this.config.currency : ''}</span><br>
-${this.config.customText ? `<span style="font-size: 0.6em;">${customTextRendered}</span><br>` : ''}
-          <span style="font-size: 0.8em;">Now: </span>
-<span style="font-size: 1.2em; font-weight: bold;">${currentValue}</span>
-<span style="font-size: 0.8em;"> ${unitLabel}/kWh</span>
-          <br>
-          <span style="font-size: 0.6em;">
-  <span style="color: blue;">&darr;</span> ${low24} ${unitLabel}
-            <span style="color: #aaa;">&nbsp;&bull;&nbsp;</span> 
-<span style="color: red;">&uarr;</span> ${high24} ${unitLabel}
-            <span style="color: #aaa;">&nbsp;&bull;&nbsp;</span> 
-            ≈ ${dispAvg} ${unitLabel}
-          </span>
-        </div>
-      `;
+      <div style="@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap'); font-family: 'Roboto', sans-serif;">
+        ${headerHtml}
+        ${customHtml}
+        ${nowHtml}
+        ${statsHtml}
+      </div>
+    `;
 
     wrapper.appendChild(infoDiv);
     chart.appendChild(canvas);
