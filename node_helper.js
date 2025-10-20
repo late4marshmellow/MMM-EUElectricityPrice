@@ -69,7 +69,7 @@ function computeGridPriceAdderSubunit(utcIso, rules, hourOffset) {
 		if (!r || typeof r.add !== 'number') continue;
 		if (!r.from && !r.to) { fallback = r.add; continue; }
 		const start = hhmmToMinutes(r.from || '00:00');
-		const end   = hhmmToMinutes(r.to   || '00:00');
+		const end = hhmmToMinutes(r.to || '00:00');
 		if (start === end) { fallback = r.add; continue; }
 		if (start < end) {
 			if (nowMin >= start && nowMin < end) return r.add;
@@ -91,7 +91,7 @@ function selectGridAddSubunitNow(rules) {
 		const add = Number(r?.add) || 0;
 		if (!r.from && !r.to) { fallback = add; continue; }
 		const start = hhmmToMinutes(r.from || '00:00');
-		const end   = hhmmToMinutes(r.to   || '00:00');
+		const end = hhmmToMinutes(r.to || '00:00');
 		if (start === end) { fallback = add; continue; }
 		if (start < end) {
 			if (nowMin >= start && nowMin < end) return add;
@@ -135,13 +135,13 @@ module.exports = NodeHelper.create({
 				}
 			}
 
-      const { quarter, hour } = this.parsePriceData(combinedData, payload);
-      const gridAddSubunit = selectGridAddSubunitNow(payload.gridPriceRules);
-      this.sendSocketNotification('PRICEDATA', {
-        priceDataQuarter: quarter,
-        priceDataHour: hour,
-        gridAddSubunit
-      });
+			const { quarter, hour } = this.parsePriceData(combinedData, payload);
+			const gridAddSubunit = selectGridAddSubunitNow(payload.gridPriceRules);
+			this.sendSocketNotification('PRICEDATA', {
+				priceDataQuarter: quarter,
+				priceDataHour: hour,
+				gridAddSubunit
+			});
 
 		} catch (e) {
 			console.error('Fetching price data failed:', e.message);
@@ -162,91 +162,91 @@ module.exports = NodeHelper.create({
 			? payload.hourOffset
 			: (-new Date().getTimezoneOffset() / 60);
 
-    const priceMultiplier = (typeof payload.priceMultiplier === 'number') ? payload.priceMultiplier : 1;
-    const priceOffset = (typeof payload.priceOffset === 'number') ? payload.priceOffset : 0; // currency/kWh
-    const gridPriceRules = Array.isArray(payload.gridPriceRules) ? payload.gridPriceRules : [{ add: 0.00 }];
-    // support settings
-    const supportThreshold = (typeof payload.supportThreshold === 'number') ? payload.supportThreshold : 0.70; // currency/kWh
-    const supportPercent = (typeof payload.supportPercent === 'number') ? payload.supportPercent : 0.90; // 0..1
+		const priceMultiplier = (typeof payload.priceMultiplier === 'number') ? payload.priceMultiplier : 1;
+		const priceOffset = (typeof payload.priceOffset === 'number') ? payload.priceOffset : 0; // currency/kWh
+		const gridPriceRules = Array.isArray(payload.gridPriceRules) ? payload.gridPriceRules : [{ add: 0.00 }];
+		// support settings
+		const supportThreshold = (typeof payload.supportThreshold === 'number') ? payload.supportThreshold : 0.70; // currency/kWh
+		const supportPercent = (typeof payload.supportPercent === 'number') ? payload.supportPercent : 0.90; // 0..1
 
 		for (const entry of data.multiAreaEntries) {
 			const areaData = entry.entryPerArea?.[payload.dataSource];
 			if (typeof areaData !== 'number') continue;
 
-      // grid as currency/kWh
-      const addSubunit = computeGridPriceAdderSubunit(entry.deliveryStart, gridPriceRules, hourOffset);
-      const gridKWh    = (addSubunit / 100); // "cent"->currency per kWh
+			// grid as currency/kWh
+			const addSubunit = computeGridPriceAdderSubunit(entry.deliveryStart, gridPriceRules, hourOffset);
+			const gridKWh = (addSubunit / 100); // "cent"->currency per kWh
 
-      const energyKWh  = (areaData / 1000) * priceMultiplier; // raw -> currency/kWh
-      const priceKWh   = energyKWh + priceOffset + gridKWh;
+			const energyKWh = (areaData / 1000) * priceMultiplier; // raw -> currency/kWh
+			const priceKWh = energyKWh + priceOffset + gridKWh;
 
-      // support applies to energy component above threshold
-      const compensatedEnergyKWh = energyKWh - (supportPercent * Math.max(0, energyKWh - supportThreshold));
-      const supportPriceKWh      = compensatedEnergyKWh + priceOffset + gridKWh;
+			// support applies to energy component above threshold
+			const compensatedEnergyKWh = energyKWh - (supportPercent * Math.max(0, energyKWh - supportThreshold));
+			const supportPriceKWh = compensatedEnergyKWh + priceOffset + gridKWh;
 
-      const dt = new Date(entry.deliveryStart);
-      dt.setTime(dt.getTime() + hourOffset * 60 * 60 * 1000);
-      const offsetDate = `${dt.getFullYear()}-${("0" + (dt.getMonth() + 1)).slice(-2)}-${("0" + dt.getDate()).slice(-2)}`;
-      const offsetTime = `${("0" + dt.getHours()).slice(-2)}:${("0" + dt.getMinutes()).slice(-2)}:00`;
+			const dt = new Date(entry.deliveryStart);
+			dt.setTime(dt.getTime() + hourOffset * 60 * 60 * 1000);
+			const offsetDate = `${dt.getFullYear()}-${("0" + (dt.getMonth() + 1)).slice(-2)}-${("0" + dt.getDate()).slice(-2)}`;
+			const offsetTime = `${("0" + dt.getHours()).slice(-2)}:${("0" + dt.getMinutes()).slice(-2)}:00`;
 
-      ret.push({
-        date: offsetDate,
-        time: offsetTime,
-        value: priceKWh,              // base price (no support), currency/kWh
-        supportValue: supportPriceKWh,// with strømstøtte, currency/kWh
-        rawMWh: areaData,             // currency/MWh
-        utc: entry.deliveryStart
-      });
+			ret.push({
+				date: offsetDate,
+				time: offsetTime,
+				value: priceKWh,              // base price (no support), currency/kWh
+				supportValue: supportPriceKWh,// with strømstøtte, currency/kWh
+				rawMWh: areaData,             // currency/MWh
+				utc: entry.deliveryStart
+			});
 		}
 
-    ret.sort((a, b) => {
-      const ka = `${a.date} ${a.time}`;
-      const kb = `${b.date} ${b.time}`;
-      return ka.localeCompare(kb);
-    });
+		ret.sort((a, b) => {
+			const ka = `${a.date} ${a.time}`;
+			const kb = `${b.date} ${b.time}`;
+			return ka.localeCompare(kb);
+		});
 
 
-    const hourBuckets = new Map(); // key: "YYYY-MM-DD HH:00"
-    const order = [];
+		const hourBuckets = new Map(); // key: "YYYY-MM-DD HH:00"
+		const order = [];
 
-    for (const p of ret) {
-      const hh = p.time.slice(0, 2);
-      const key = `${p.date} ${hh}:00`;
-      if (!hourBuckets.has(key)) {
-        hourBuckets.set(key, { sumRaw: 0, n: 0, firstUtc: p.utc, date: p.date, time: `${hh}:00:00` });
-        order.push(key);
-      }
-      const b = hourBuckets.get(key);
-      if (typeof p.rawMWh === 'number') {
-        b.sumRaw += p.rawMWh;
-        b.n += 1;
-      }
-    }
+		for (const p of ret) {
+			const hh = p.time.slice(0, 2);
+			const key = `${p.date} ${hh}:00`;
+			if (!hourBuckets.has(key)) {
+				hourBuckets.set(key, { sumRaw: 0, n: 0, firstUtc: p.utc, date: p.date, time: `${hh}:00:00` });
+				order.push(key);
+			}
+			const b = hourBuckets.get(key);
+			if (typeof p.rawMWh === 'number') {
+				b.sumRaw += p.rawMWh;
+				b.n += 1;
+			}
+		}
 
-    const hour = [];
-    for (const key of order) {
-      const b = hourBuckets.get(key);
-      const avgRawMWh = b.n > 0 ? (b.sumRaw / b.n) : 0;
+		const hour = [];
+		for (const key of order) {
+			const b = hourBuckets.get(key);
+			const avgRawMWh = b.n > 0 ? (b.sumRaw / b.n) : 0;
 
-      const gridSubunit = computeGridPriceAdderSubunit(b.firstUtc, gridPriceRules, hourOffset);
-      const gridKWh = gridSubunit / 100;
+			const gridSubunit = computeGridPriceAdderSubunit(b.firstUtc, gridPriceRules, hourOffset);
+			const gridKWh = gridSubunit / 100;
 
-      const energyKWhHour  = (avgRawMWh / 1000) * priceMultiplier;
-      const priceKWhHour   = energyKWhHour + priceOffset + gridKWh;
+			const energyKWhHour = (avgRawMWh / 1000) * priceMultiplier;
+			const priceKWhHour = energyKWhHour + priceOffset + gridKWh;
 
-      const compensatedEnergyHour = energyKWhHour - (supportPercent * Math.max(0, energyKWhHour - supportThreshold));
-      const supportPriceKWhHour   = compensatedEnergyHour + priceOffset + gridKWh;
+			const compensatedEnergyHour = energyKWhHour - (supportPercent * Math.max(0, energyKWhHour - supportThreshold));
+			const supportPriceKWhHour = compensatedEnergyHour + priceOffset + gridKWh;
 
-      hour.push({
-        date: b.date,
-        time: b.time,
-        value: priceKWhHour,
-        supportValue: supportPriceKWhHour
-      });
-    }
+			hour.push({
+				date: b.date,
+				time: b.time,
+				value: priceKWhHour,
+				supportValue: supportPriceKWhHour
+			});
+		}
 
-    return { quarter: ret, hour };
+		return { quarter: ret, hour };
 
-  }
+	}
 
 });

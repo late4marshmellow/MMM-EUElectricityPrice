@@ -1,93 +1,112 @@
 Module.register("MMM-EUElectricityPrice", {
-  validDataSources: ['EE', 'LT', 'LV', 'AT', 'BE', 'FR', 'DE', 'NL', 'PL', 'DK1', 'DK2', 'FI', 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4', 'RO','BG','SYS'],
+  validDataSources: ['EE', 'LT', 'LV', 'AT', 'BE', 'FR', 'DE', 'NL', 'PL', 'DK1', 'DK2', 'FI', 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4', 'RO', 'BG', 'SYS'],
   validCurrencies: ['NOK', 'SEK', 'DKK', 'PLN', 'EUR', 'BGN', 'RON'],
   defaults: {
-    dataSource: 'NO1', // use area code from validDataSources
-    currency: 'NOK', // NOK, SEK, DKK, PLN, EUR, BGN, RON
-    centName: 'øre', // name of sub-unit for display, e.g. "øre" for NOK or "cent" for EUR
-    displayInSubunit: false,
-    headText: 'Electricity Price', // main header text, blank for none
-    customText: '', // template for custom info line, // supports tags: {{price}}, {{avg}}, {{low24}}, {{high24}}, {{date}}, {{time}}, {{currency}}, {{centName}}, {{area}}, {{gridEnergy}}
-    showCurrency: true,
-    showLegend: false, // toggle legend on/off
-    tomorrowDataTime: false,
-    tomorrowDataTimeMinute: 1,
-    errorMessage: 'Data could not be fetched.',
-    loadingMessage: 'Loading data...',
-    showPastHours: null,
-    showFutureHours: 36,
-    totalHours: 40,
-    hourOffset: 1,
-    priceOffset: 0, // e.g. 10 for adding 0.10 currency sub-units to base price
-    priceMultiplier: 1.25, // e.g. 1.25 for 25% tax, added to base price
-    // grid price addition/subtraction rules (time in local area time)
+    // ── Data source & units ───────────────────────────────────────────────
+    dataSource: 'NO1',               // Delivery area (must be in validDataSources)
+    currency: 'NOK',                 // One of validCurrencies
+    centName: 'øre',                 // Sub-unit label (e.g., "øre", "cent")
+    displayInSubunit: false,         // true → show sub-unit (øre/cent) instead of main currency
+
+    // ── Header & info text ────────────────────────────────────────────────
+    headText: 'Electricity Price',   // Top header; empty string to hide
+    customText: '',                  // Custom line template; tags: {{price}}, {{avg}}, {{low24}}, {{high24}}, {{date}}, {{time}}, {{currency}}, {{centName}}, {{area}}, {{gridEnergy}}
+    showCurrency: true,              // Append currency code in header
+
+    // ── Visibility toggles (info area) ────────────────────────────────────
+    showNowLine: true,               // Show “Now: …” line
+    currentPriceText: 'Now: ',       // Label for current price line
+    showSupportInNow: false,          // Append support (“strømstøtte”) price next to Now
+    supportText: 'with support: ',   // Label used when showing support price
+    showStatsText: true,             // Show low/high/avg line
+    showLegend: false,               // Chart legend on/off
+    
+    // ── Price calculation ────────────────────────────────────────────────
+    priceMultiplier: 1.25,           // Multiplier on raw energy (e.g., VAT 25% → 1.25)
+    priceOffset: 0,                  // Fixed add (main currency/kWh), e.g. 0.0713 for 7.13 cents
+
+    // ── Grid price rules (local time) ─────────────────────────────────────
     gridPriceRules: [
-      { from: '06:00', to: '22:00', add: 47.66 },
-      { from: '22:00', to: '06:00', add: 32.66 }
+      { from: '06:00', to: '22:00', add: 47.66 }, // { from: 'HH:MM', to: 'HH:MM', add: øre/cent per kWh }
+      { from: '22:00', to: '06:00', add: 32.66 }  
     ],
-    width: null,
-    height: null,
-    posRight: null,
-    posDown: null,
-    chartType: 'bar',
-    showAverage: true,
+
+    // ── Strømstøtte (support) overlay ────────────────────────────────────
+    showSupportLine: false,          // Toggle second line on chart
+    supportThreshold: 0.75,          // Threshold (main currency/kWh), e.g., 0.70 NOK/kWh
+    supportPercent: 0.90,            // Compensation fraction (e.g., 0.90 = 90%)
+    supportColor: '#FFD700',         // Line color
+    supportLineWidth: 2,             // Line width
+
+    // ── Time range & resolution ───────────────────────────────────────────
+    resolution: 'hour',              // 'hour' or 'quarter'
+    showPastHours: null,             // Hours to show into the past; null fills from totalHours
+    showFutureHours: 36,             // Hours to show into the future
+    totalHours: 40,                  // Total window when showPastHours is null
+    hourOffset: 1,                   // Display offset from UTC (hours)
+
+    // ── Chart appearance ─────────────────────────────────────────────────
+    chartType: 'bar',                // 'bar' or 'line'
+    showAverage: true,               // Show average line of visible data
     averageColor: '#fff',
     showGrid: true,
     gridColor: 'rgba(255, 255, 255, 0.3)',
     labelColor: '#fff',
+
+    // Colors for bars/line segments
     pastColor: 'rgba(255, 255, 255, 0.5)',
     pastBg: 'rgba(255, 255, 255, 0.3)',
     currentColor: '#CC7722',
     currentBg: '#CC7722',
     normalColor: '#3b82f6',
-    currentbgSwitch: false,
     futureColor: 'rgba(255, 255, 255, 0.8)',
     futureBg: 'rgba(255, 255, 255, 0.6)',
-    lineColor: null,
+    currentbgSwitch: false,          // (kept for compatibility)
+    lineColor: null,                 // If null, uses past/futureLineColor segmentation
     pastLineColor: 'rgba(255,255,255,0.5)',
     futureLineColor: 'rgba(255,255,255,0.6)',
-    alertLimit: false,
-    alertValue: 100,
-    alertColor: '#B22222',
-    alertBg: '#B22222',
-    safeLimit: false,
-    safeValue: 50,
-    safeColor: '#228B22',
-    safeBg: '#228B22',
-    beginAtZero: true,
+
+    // Point/line sizing
     borderWidthLine: 3,
+    borderWidthBar: 1,
     pointRegular: 4,
     pointCurrent: 10,
     pointQuarter: 2,
-    borderWidthBar: 1,
-    tickInterval: false,
-    updateUIInterval: 5 * 60,
+
+    // ── Threshold coloring ───────────────────────────────────────────────
+    alertLimit: false,               // false to disable; else compare against alertValue
+    alertValue: 100,                 // If displaying subunit, enter in øre/cent; else main currency
+    alertColor: '#B22222',
+    alertBg: '#B22222',
+    safeLimit: false,                // false to disable; else compare against safeValue
+    safeValue: 50,                   // If displaying subunit, enter in øre/cent; else main currency
+    safeColor: '#228B22',
+    safeBg: '#228B22',
+
+    // ── Axes & ticks ─────────────────────────────────────────────────────
+    beginAtZero: true,
     yDecimals: 2,
-    resolution: 'hour',
     xLabelDiagonal: true,
     xLabelAngle: 60,
     xLabelPadding: 4,
     xAutoSkip: false,
     xMaxTicks: null,
     xLabelEveryHours: 1,
-        // --- strømstøtte (support) ---
-    showSupportLine: false,       // toggle on/off
-    supportThreshold: 0.70,       // currency/kWh (e.g., 0.70 NOK/kWh)
-    supportPercent: 0.90,         // 90% in Norway
-    supportColor: '#FFD700',      // gold
-    supportLineWidth: 2,
-        xLabelEveryHours: 1,
+    tickInterval: false,
 
-    // visibility toggles
-    showNowLine: true,            // toggle “Now: …”
-    showStatsLine: true,          // toggle low/high/avg strip
-    showSupportInNow: true,       // show support value next to Now
-    supportText: 'with support: ', // template for support info in Now line
-    currentPriceText: 'Now: ', // template for current price line
+    // ── Size & position ──────────────────────────────────────────────────
+    width: null,                     // e.g., '380px'
+    height: null,                    // e.g., '220px'
+    posRight: null,                  // CSS translateX
+    posDown: null,                   // CSS translateY
 
-
+    // ── Update & fetch behavior ──────────────────────────────────────────
+    updateUIInterval: 5 * 60,        // Seconds between UI refreshes
+    tomorrowDataTime: false,         // Or hour (0–23) to poll tomorrow’s prices
+    tomorrowDataTimeMinute: 1,       // Minute within that hour
+    errorMessage: 'Data could not be fetched.',
+    loadingMessage: 'Loading data...'
   },
-
   getScripts: function () {
     return [this.file('chart-loader.js')];
   },
@@ -192,21 +211,21 @@ Module.register("MMM-EUElectricityPrice", {
       urlTomorrow = `https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?market=DayAhead&date=${formattedTomorrow}&currency=${currency}&deliveryArea=${this.config.dataSource}`;
     }
 
-      this.sendSocketNotification('GET_PRICEDATA', {
-        urlToday,
-        urlTomorrow,
-        urlYesterday,
-        tomorrowDataTime: this.config.tomorrowDataTime,
-        hourOffset: this.config.hourOffset,
-        priceOffset: this.config.priceOffset,
-        priceMultiplier: this.config.priceMultiplier,
-        dataSource: this.config.dataSource,
-        validDataSources: this.validDataSources,
-        gridPriceRules: this.config.gridPriceRules,
-        // support
-        supportThreshold: this.config.supportThreshold,
-        supportPercent: this.config.supportPercent
-      });
+    this.sendSocketNotification('GET_PRICEDATA', {
+      urlToday,
+      urlTomorrow,
+      urlYesterday,
+      tomorrowDataTime: this.config.tomorrowDataTime,
+      hourOffset: this.config.hourOffset,
+      priceOffset: this.config.priceOffset,
+      priceMultiplier: this.config.priceMultiplier,
+      dataSource: this.config.dataSource,
+      validDataSources: this.validDataSources,
+      gridPriceRules: this.config.gridPriceRules,
+      // support
+      supportThreshold: this.config.supportThreshold,
+      supportPercent: this.config.supportPercent
+    });
   },
 
   socketNotificationReceived: function (notification, payload) {
@@ -283,9 +302,9 @@ Module.register("MMM-EUElectricityPrice", {
     }
 
     // Display scaling (main vs sub-unit)
-const DISPLAY_FACTOR = this.config.displayInSubunit ? 100 : 1;
-// Label for axis and info strip
-const unitLabel = this.config.displayInSubunit ? this.config.centName : this.config.currency;
+    const DISPLAY_FACTOR = this.config.displayInSubunit ? 100 : 1;
+    // Label for axis and info strip
+    const unitLabel = this.config.displayInSubunit ? this.config.centName : this.config.currency;
 
     let now = new Date();
     const step = (this.config.resolution === 'hour') ? 60 : 15;
@@ -363,41 +382,41 @@ const unitLabel = this.config.displayInSubunit ? this.config.centName : this.con
         : toDisplay(Number(this.config.safeValue));
     }
 
-for (let i = startIdx; i <= endIdx; i++) {
-  const { value, time, date } = this.priceData[i];
+    for (let i = startIdx; i <= endIdx; i++) {
+      const { value, time, date } = this.priceData[i];
 
-  // ⚡ final price (base + offset + grid) is already in value
-  const displayVal = value * DISPLAY_FACTOR;
+      // ⚡ final price (base + offset + grid) is already in value
+      const displayVal = value * DISPLAY_FACTOR;
 
-  showData.push(displayVal);
-  showLabel.push(time[0] === '0' ? time.substring(1, 5) : time.substring(0, 5));
-  showDate.push(date);
-  // support track (if present)
-  if (this.config.showSupportLine && this.priceDataSupport && this.priceDataSupport[i] && typeof this.priceDataSupport[i].value === 'number') {
-    supportData.push(this.priceDataSupport[i].value * DISPLAY_FACTOR);
-  } else {
-    supportData.push(null); // keep indexes aligned
-  }
+      showData.push(displayVal);
+      showLabel.push(time[0] === '0' ? time.substring(1, 5) : time.substring(0, 5));
+      showDate.push(date);
+      // support track (if present)
+      if (this.config.showSupportLine && this.priceDataSupport && this.priceDataSupport[i] && typeof this.priceDataSupport[i].value === 'number') {
+        supportData.push(this.priceDataSupport[i].value * DISPLAY_FACTOR);
+      } else {
+        supportData.push(null); // keep indexes aligned
+      }
 
-  if (i === currentHourMark) {
-    showColor.push(this.config.currentColor);
-    showBg.push(this.config.futureBg);
-  } else if (i < currentHourMark) {
-    showColor.push(this.config.pastColor);
-    showBg.push(this.config.pastBg);
-  } else {
-    if (this.config.alertLimit !== false && displayVal > alertValue) {
-      showColor.push(this.config.alertColor);
-      showBg.push(this.config.alertBg);
-    } else if (this.config.safeLimit !== false && displayVal < safeValue) {
-      showColor.push(this.config.safeColor);
-      showBg.push(this.config.safeBg);
-    } else {
-      showColor.push(this.config.normalColor);
-      showBg.push(this.config.futureBg);
+      if (i === currentHourMark) {
+        showColor.push(this.config.currentColor);
+        showBg.push(this.config.futureBg);
+      } else if (i < currentHourMark) {
+        showColor.push(this.config.pastColor);
+        showBg.push(this.config.pastBg);
+      } else {
+        if (this.config.alertLimit !== false && displayVal > alertValue) {
+          showColor.push(this.config.alertColor);
+          showBg.push(this.config.alertBg);
+        } else if (this.config.safeLimit !== false && displayVal < safeValue) {
+          showColor.push(this.config.safeColor);
+          showBg.push(this.config.safeBg);
+        } else {
+          showColor.push(this.config.normalColor);
+          showBg.push(this.config.futureBg);
+        }
+      }
     }
-  }
-}
 
 
 
@@ -440,28 +459,28 @@ for (let i = startIdx; i <= endIdx; i++) {
 
     const self = this;
     const borderWidth = (this.config.chartType === 'line') ? this.config.borderWidthLine : this.config.borderWidthBar;
-        const diagonal = !!this.config.xLabelDiagonal;
+    const diagonal = !!this.config.xLabelDiagonal;
     const angle = Math.max(0, Math.min(90, this.config.xLabelAngle || 60));
     // prepare support dataset (use local supportData aligned with dispLabel)
     const supportDataset = (this.config.showSupportLine)
       ? [{
-          type: 'line',
-          label: 'Strømstøtte',
-          data: supportData,
-          borderColor: this.config.supportColor,
-          color: this.config.supportColor,
-          borderWidth: this.config.supportLineWidth,
-          pointRadius: 0,
-          fill: false,
-          order: 3,           // draw ABOVE main (2) and average (1)
-          datalabels: { display: false }
-        }]
+        type: 'line',
+        label: 'Strømstøtte',
+        data: supportData,
+        borderColor: this.config.supportColor,
+        color: this.config.supportColor,
+        borderWidth: this.config.supportLineWidth,
+        pointRadius: 0,
+        fill: false,
+        order: 3,           // draw ABOVE main (2) and average (1)
+        datalabels: { display: false }
+      }]
       : [];
 
 
     // Build chart (guarded)
     let myChart = null;
-    
+
     try {
       myChart = new Chart(canvas, {
         type: this.config.chartType,
@@ -629,42 +648,42 @@ for (let i = startIdx; i <= endIdx; i++) {
       myChart.update('none');
     }
 
-const currentValue = (this.priceData[currentHourMark].value * DISPLAY_FACTOR).toFixed(d2);
-// support “Now”
-const currentSupportValue = (
-  this.config.showSupportInNow &&
-  this.priceDataSupport &&
-  this.priceDataSupport[currentHourMark] &&
-  typeof this.priceDataSupport[currentHourMark].value === 'number'
-) ? (this.priceDataSupport[currentHourMark].value * DISPLAY_FACTOR).toFixed(d2) : null;
+    const currentValue = (this.priceData[currentHourMark].value * DISPLAY_FACTOR).toFixed(d2);
+    // support “Now”
+    const currentSupportValue = (
+      this.config.showSupportInNow &&
+      this.priceDataSupport &&
+      this.priceDataSupport[currentHourMark] &&
+      typeof this.priceDataSupport[currentHourMark].value === 'number'
+    ) ? (this.priceDataSupport[currentHourMark].value * DISPLAY_FACTOR).toFixed(d2) : null;
 
 
-// Average over displayed series (dispData is already scaled if you pushed with DISPLAY_FACTOR)
-const dispAvg = dispData.length
-  ? (dispData.reduce((a, b) => a + b, 0) / dispData.length).toFixed(d2)
-  : '--';
+    // Average over displayed series (dispData is already scaled if you pushed with DISPLAY_FACTOR)
+    const dispAvg = dispData.length
+      ? (dispData.reduce((a, b) => a + b, 0) / dispData.length).toFixed(d2)
+      : '--';
 
-// past 24h stats (raw data slice, scale for display here)
-const past24 = this.priceData.slice(Math.max(currentHourMark - 24 * 4, 0), currentHourMark);
-const low24  = past24.length ? (Math.min(...past24.map(i => i.value)) * DISPLAY_FACTOR).toFixed(d2) : '--';
-const high24 = past24.length ? (Math.max(...past24.map(i => i.value)) * DISPLAY_FACTOR).toFixed(d2) : '--';
+    // past 24h stats (raw data slice, scale for display here)
+    const past24 = this.priceData.slice(Math.max(currentHourMark - 24 * 4, 0), currentHourMark);
+    const low24 = past24.length ? (Math.min(...past24.map(i => i.value)) * DISPLAY_FACTOR).toFixed(d2) : '--';
+    const high24 = past24.length ? (Math.max(...past24.map(i => i.value)) * DISPLAY_FACTOR).toFixed(d2) : '--';
 
-// --- templating + gridEnergy tag (from node_helper) ---
-const renderCustomText = (tpl, map) =>
-  tpl ? String(tpl).replace(/{{\s*(\w+)\s*}}/g, (m, k) => (k in map ? map[k] : '')) : '';
+    // --- templating + gridEnergy tag (from node_helper) ---
+    const renderCustomText = (tpl, map) =>
+      tpl ? String(tpl).replace(/{{\s*(\w+)\s*}}/g, (m, k) => (k in map ? map[k] : '')) : '';
 
-const customTextRendered = renderCustomText(this.config.customText, {
-  price: currentValue,
-  avg: dispAvg,
-  low24: low24,
-  high24: high24,
-  date: currentDate,
-  time: currentTime.slice(0,5),
-  currency: this.config.currency,
-  centName: this.config.centName,
-  area: this.config.dataSource,
-  gridEnergy: gridEnergy,
-});
+    const customTextRendered = renderCustomText(this.config.customText, {
+      price: currentValue,
+      avg: dispAvg,
+      low24: low24,
+      high24: high24,
+      date: currentDate,
+      time: currentTime.slice(0, 5),
+      currency: this.config.currency,
+      centName: this.config.centName,
+      area: this.config.dataSource,
+      gridEnergy: gridEnergy,
+    });
 
 
 
@@ -686,7 +705,7 @@ const customTextRendered = renderCustomText(this.config.customText, {
         <span style="font-size: 1.0em; font-weight: bold;">${currentSupportValue}</span>
         <span style="font-size: 0.8em;"> ${unitLabel}/kWh)</span>` : ``}
       <br>` : '';
-    const statsHtml = this.config.showStatsLine ? `
+    const statsHtml = this.config.showStatsText ? `
       <span style="font-size: 0.6em;">
         <span style="color: blue;">&darr;</span> ${low24} ${unitLabel}
         <span style="color: #aaa;">&nbsp;&bull;&nbsp;</span>
