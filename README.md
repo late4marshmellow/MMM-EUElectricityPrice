@@ -20,6 +20,7 @@ Supports both hourly and 15-minute (quarter-hour) resolutions.
 ![Screenshot](bar-with-price.png "Screenshot")
 
 
+
 ## Installation
 
 Clone this repository in your modules folder, and install dependencies:
