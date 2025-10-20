@@ -27,8 +27,8 @@ Module.register("MMM-EUElectricityPrice", {
 
     // ── Grid price rules (local time) ─────────────────────────────────────
     gridPriceRules: [
-      { from: '06:00', to: '22:00', add: 47.66 }, // { from: 'HH:MM', to: 'HH:MM', add: øre/cent per kWh }
-      { from: '22:00', to: '06:00', add: 32.66 }  
+      { from: '06:00', to: '22:00', add: 0 }, // { from: 'HH:MM', to: 'HH:MM', add: øre/cent per kWh }
+      { from: '22:00', to: '06:00', add: 0 }  
     ],
 
     // ── Strømstøtte (support) overlay ────────────────────────────────────
