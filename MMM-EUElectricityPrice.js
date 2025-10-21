@@ -1,14 +1,15 @@
 // =============================
 // File: MMM-EUElectricityPrice.js
 // =============================
-/* Magic Mirror
+/* MagicMirror²
 * Module: MMM-EUElectricityPrice
 *
 * By late4marshmellow a fork from JanneKalliola (MMM-FiElectricityPrice)
 *
 */
+/* global Chart */
 
-Module.register("MMM-EUElectricityPrice", {
+Module.register('MMM-EUElectricityPrice', {
   validDataSources: ['EE', 'LT', 'LV', 'AT', 'BE', 'FR', 'DE', 'NL', 'PL', 'DK1', 'DK2', 'FI', 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4', 'RO', 'BG', 'SYS'],
   validCurrencies: ['NOK', 'SEK', 'DKK', 'PLN', 'EUR', 'BGN', 'RON'],
   defaults: {
@@ -38,7 +39,7 @@ Module.register("MMM-EUElectricityPrice", {
     // ── Grid price rules (local time) ─────────────────────────────────────
     gridPriceRules: [
       { from: '06:00', to: '22:00', add: 0 }, // { from: 'HH:MM', to: 'HH:MM', add: øre/cent per kWh }
-      { from: '22:00', to: '06:00', add: 0 }  
+      { from: '22:00', to: '06:00', add: 0 },  
     ],
 
     // ── Strømstøtte (support) overlay ────────────────────────────────────
@@ -115,7 +116,7 @@ Module.register("MMM-EUElectricityPrice", {
     tomorrowDataTime: false,         // Or hour (0–23) to poll tomorrow’s prices
     tomorrowDataTimeMinute: 1,       // Minute within that hour
     errorMessage: 'Data could not be fetched.',
-    loadingMessage: 'Loading data...'
+    loadingMessage: 'Loading data...',
   },
   getScripts: function () {
     return [this.file('chart-loader.js')];
@@ -143,7 +144,7 @@ Module.register("MMM-EUElectricityPrice", {
       const now = new Date();
       const parts = new Intl.DateTimeFormat('en-GB', {
         timeZone: tz,
-        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
       }).format(now).split(':').map(Number);
       const h = parts[0] || 0, m = parts[1] || 0;
       return h * 60 + m;
@@ -158,7 +159,7 @@ Module.register("MMM-EUElectricityPrice", {
       const publishTimeToday = new Date(
         now.getFullYear(), now.getMonth(), now.getDate(),
         this.config.tomorrowDataTime,
-        this.config.tomorrowDataTimeMinute || 0, 0, 0
+        this.config.tomorrowDataTimeMinute || 0, 0, 0,
       );
       const publishTimeTomorrow = new Date(publishTimeToday.getTime() + 24 * 60 * 60 * 1000);
 
@@ -192,16 +193,16 @@ Module.register("MMM-EUElectricityPrice", {
   },
 
   getPriceData: function () {
-    let currency = this.config.currency;
+    const currency = this.config.currency;
     let urlToday, urlTomorrow, urlYesterday;
-    let today = new Date();
-    let formattedToday = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
-    let yesterday = new Date(today);
+    const today = new Date();
+    const formattedToday = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+    const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
-    let formattedYesterday = `${yesterday.getFullYear()}-${yesterday.getMonth() + 1}-${yesterday.getDate()}`;
-    let tomorrow = new Date(today);
+    const formattedYesterday = `${yesterday.getFullYear()}-${yesterday.getMonth() + 1}-${yesterday.getDate()}`;
+    const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
-    let formattedTomorrow = `${tomorrow.getFullYear()}-${tomorrow.getMonth() + 1}-${tomorrow.getDate()}`;
+    const formattedTomorrow = `${tomorrow.getFullYear()}-${tomorrow.getMonth() + 1}-${tomorrow.getDate()}`;
 
     if (!this.validCurrencies.includes(this.config.currency)) {
       const errorMessage = `Please change currency to one of the valid ones. Current currency is set as ${currency}`;
@@ -234,18 +235,18 @@ Module.register("MMM-EUElectricityPrice", {
       gridPriceRules: this.config.gridPriceRules,
       // support
       supportThreshold: this.config.supportThreshold,
-      supportPercent: this.config.supportPercent
+      supportPercent: this.config.supportPercent,
     });
   },
 
   socketNotificationReceived: function (notification, payload) {
-    if (notification === "PRICEDATA") {
+    if (notification === 'PRICEDATA') {
       this.error = false;
       this.priceData = (this.config.resolution === 'hour')
         ? (payload.priceDataHour || [])
         : (payload.priceDataQuarter || []);
-      this.priceDataSupport = this.priceData.map(p => ({
-        date: p.date, time: p.time, value: (typeof p.supportValue === 'number' ? p.supportValue : null)
+      this.priceDataSupport = this.priceData.map((p) => ({
+        date: p.date, time: p.time, value: (typeof p.supportValue === 'number' ? p.supportValue : null),
       }));
 
       this.gridAddSubunit = payload.gridAddSubunit;
@@ -257,9 +258,9 @@ Module.register("MMM-EUElectricityPrice", {
       } else {
         this.priceMetadata['average'] = false;
       }
-    } else if (notification === "PRICEDATAERROR") {
+    } else if (notification === 'PRICEDATAERROR') {
       this.setError(`Data fetch issue: ${payload || 'Unknown error'}`);
-    } else if (notification === "INVALID_DATASOURCE") {
+    } else if (notification === 'INVALID_DATASOURCE') {
       this.setError(payload);
     }
     this.updateDom();
@@ -275,7 +276,7 @@ Module.register("MMM-EUElectricityPrice", {
   },
 
   getDom: function () {
-    const wrapper = document.createElement("div");
+    const wrapper = document.createElement('div');
     if (this.config.width) {
       wrapper.style.width = this.config.width;
       wrapper.style.transform = `translate(${this.config.posRight}, ${this.config.posDown})`;
@@ -316,7 +317,7 @@ Module.register("MMM-EUElectricityPrice", {
     // Label for axis and info strip
     const unitLabel = this.config.displayInSubunit ? this.config.centName : this.config.currency;
 
-    let now = new Date();
+    const now = new Date();
     const step = (this.config.resolution === 'hour') ? 60 : 15;
     const minutesRounded = Math.floor(now.getMinutes() / step) * step;
     let currentSlot = new Date(
@@ -324,7 +325,7 @@ Module.register("MMM-EUElectricityPrice", {
       now.getMonth(),
       now.getDate(),
       now.getHours(),
-      minutesRounded, 0, 0
+      minutesRounded, 0, 0,
     );
 
     currentSlot = new Date(currentSlot - currentSlot.getTimezoneOffset() * 60000).toISOString();
@@ -431,16 +432,16 @@ Module.register("MMM-EUElectricityPrice", {
 
 
     // ---- Resolution switch ----
-    let dispData = showData.slice();
-    let dispLabel = showLabel.slice();
-    let dispColor = showColor.slice();
-    let dispBg = showBg.slice();
-    let dispDate = showDate.slice();
+    const dispData = showData.slice();
+    const dispLabel = showLabel.slice();
+    const dispColor = showColor.slice();
+    const dispBg = showBg.slice();
+    const dispDate = showDate.slice();
 
-    const hourOnly = (lbl) => String(lbl).split(':')[0].padStart(2, '0') + ':00';
+    const hourOnly = (lbl) => `${String(lbl).split(':')[0].padStart(2, '0')  }:00`;
 
     // --- Chart DOM ---
-    const chart = document.createElement("div");
+    const chart = document.createElement('div');
     chart.className = 'small light';
     const canvas = document.createElement('canvas');
 
@@ -483,7 +484,7 @@ Module.register("MMM-EUElectricityPrice", {
         pointRadius: 0,
         fill: false,
         order: 3,           // draw ABOVE main (2) and average (1)
-        datalabels: { display: false }
+        datalabels: { display: false },
       }]
       : [];
 
@@ -525,22 +526,22 @@ Module.register("MMM-EUElectricityPrice", {
                   currentDispIndex = (currentHourMark - startIdx);
                 } else {
                   // your existing hour-mode findIndex stays as-is
-                  const hourOnly = (lbl) => String(lbl).split(':')[0].padStart(2, '0') + ':00';
+                  const hourOnly = (lbl) => `${String(lbl).split(':')[0].padStart(2, '0')  }:00`;
                   const currentHourLabel = hourOnly(showLabel[currentHourMark - startIdx]);
                   const currentDateStr = showDate[currentHourMark - startIdx];
                   currentDispIndex = dispLabel.findIndex((lbl, idx) =>
-                    (dispDate[idx] === currentDateStr && lbl === currentHourLabel)
+                    (dispDate[idx] === currentDateStr && lbl === currentHourLabel),
                   );
                   if (currentDispIndex < 0) currentDispIndex = 0;
                 }
 
                 return (i < currentDispIndex) ? this.config.pastLineColor : this.config.futureLineColor;
-              }
-            } : undefined
+              },
+            } : undefined,
 
           }]
             .concat(this.config.showAverage ? [averageSet] : [])
-            .concat(supportDataset)
+            .concat(supportDataset),
         },
 
         options: {
@@ -553,8 +554,8 @@ Module.register("MMM-EUElectricityPrice", {
                 callback: function (value) {
                   const d = Math.max(0, Math.min(2, self.config.yDecimals));
                   return Number(value).toFixed(d);
-                }
-              }
+                },
+              },
             },
             x: {
               ticks: {
@@ -590,7 +591,7 @@ Module.register("MMM-EUElectricityPrice", {
                     const hh = parseInt(val.slice(0, 2), 10);
                     return (hh % step === 0) ? val : '';
                   }
-                }
+                },
               },
               grid: this.config.showGrid ? {
                 color: (ctx) => {
@@ -604,9 +605,9 @@ Module.register("MMM-EUElectricityPrice", {
                   const lbl = String(ctx.tick?.label || '');
                   const mm = lbl.slice(-2);
                   return (mm === '00') ? self.config.labelColor : 'rgba(0,0,0,0)';
-                }
-              } : undefined
-            }
+                },
+              } : undefined,
+            },
           },
           animation: false,
           plugins: {
@@ -620,11 +621,11 @@ Module.register("MMM-EUElectricityPrice", {
                   const isCurrent = ctx.dataIndex === currentIdxDisplayed;
                   const isHour = (mm === '00');
                   return isHour || isCurrent;
-                }
+                },
               }
-              : {}
-          }
-        }
+              : {},
+          },
+        },
       });
     } catch (err) {
       console.error('Chart init failed, retrying:', err);
@@ -651,7 +652,7 @@ Module.register("MMM-EUElectricityPrice", {
         pointSizes = dispLabel.map((lbl, idx) =>
           (dispDate[idx] === currentDateStr && lbl === currentHourLabel)
             ? this.config.pointCurrent
-            : this.config.pointRegular
+            : this.config.pointRegular,
         );
       }
       myChart.data.datasets[0].pointRadius = pointSizes;
@@ -675,8 +676,8 @@ Module.register("MMM-EUElectricityPrice", {
 
     // past 24h stats (raw data slice, scale for display here)
     const past24 = this.priceData.slice(Math.max(currentHourMark - 24 * 4, 0), currentHourMark);
-    const low24 = past24.length ? (Math.min(...past24.map(i => i.value)) * DISPLAY_FACTOR).toFixed(d2) : '--';
-    const high24 = past24.length ? (Math.max(...past24.map(i => i.value)) * DISPLAY_FACTOR).toFixed(d2) : '--';
+    const low24 = past24.length ? (Math.min(...past24.map((i) => i.value)) * DISPLAY_FACTOR).toFixed(d2) : '--';
+    const high24 = past24.length ? (Math.max(...past24.map((i) => i.value)) * DISPLAY_FACTOR).toFixed(d2) : '--';
 
     // --- templating + gridEnergy tag (from node_helper) ---
     const renderCustomText = (tpl, map) =>
@@ -698,7 +699,7 @@ Module.register("MMM-EUElectricityPrice", {
 
 
 
-    const infoDiv = document.createElement("div");
+    const infoDiv = document.createElement('div');
     infoDiv.className = 'bright';
     const headerHtml = this.config.headText
       ? `<span style="font-size: 1.2em; font-weight: bold;">${this.config.headText} ${this.config.showCurrency ? this.config.currency : ''}</span><br>`
@@ -713,7 +714,7 @@ Module.register("MMM-EUElectricityPrice", {
       ${currentSupportValue !== null ? `
         <span style="font-size: 0.8em;"> &nbsp; (${this.config.supportText} </span>
         <span style="font-size: 1.0em; font-weight: bold;">${currentSupportValue}</span>
-        <span style="font-size: 0.8em;"> ${unitLabel}/kWh)</span>` : ``}
+        <span style="font-size: 0.8em;"> ${unitLabel}/kWh)</span>` : ''}
       <br>` : '';
     const statsHtml = this.config.showStatsText ? `
       <span style="font-size: 0.6em;">
@@ -737,5 +738,5 @@ Module.register("MMM-EUElectricityPrice", {
     chart.appendChild(canvas);
     wrapper.appendChild(chart);
     return wrapper;
-  }
+  },
 });
