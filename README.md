@@ -25,30 +25,32 @@ Supports both hourly and 15-minute (quarter-hour) resolutions.
 
 Clone this repository in your modules folder, and install dependencies:
 
-    cd ~/MagicMirror/modules 
-    git clone https://github.com/late4marshmellow/MMM-EUElectricityPrice
-    cd MMM-EUElectricityPrice
-    npm install 
+```bash
+cd ~/MagicMirror/modules 
+git clone https://github.com/late4marshmellow/MMM-EUElectricityPrice
+cd MMM-EUElectricityPrice
+npm install
+```
 
 
 ## Configuration
 
-Go to the MagicMirror/config directory and edit the config.js file. Add the module to your modules array in your config.js.
+Go to the MagicMirror/config directory and edit the config.js file. 
+Add the module to your modules array in your config.js.
 
 Enter as minimimum these details in the config.js for your MagicMirror installation:
 your dataSource is found here: https://data.nordpoolgroup.com/map?deliveryDate=latest&currency=EUR&market=DayAhead&mapDataType=Price&resolution=60
 
-        {
-            module: "MMM-EUElectricityPrice",
-            position: "top_right",
-            config: {
-	    	headText: 'Electricity Price',
-	    	dataSource: 'NO1', 
-      	currency: 'NOK', 
-		    chartType: 'bar', //can be 'bar' or 'line' (line looks good when module is placed in e.g 'bottom_center')
-     
-            }
-        },
+
+```js
+{
+    module: "MMM-EUElectricityPrice",
+    position: "top_center",
+    config: {headText: 'Electricity Price',dataSource: 'NO1', // Find your area in at nordpool or link above
+currency: 'NOK',  //valid currencies: 'NOK', 'SEK', 'DKK', 'PLN', 'EUR', 'BGN', 'RON'    
+    }
+},
+```
 
 ## Module configuration
 The module has the following configuration options:
@@ -457,7 +459,7 @@ The module has the following configuration options:
 </tr>
 </tbody> </table>
 
-## Changelog
+## Update
 
 **2024-10-16** Updated to fit new Nordpool API, error message on screen when wrong datasource or currency is entered.
 
