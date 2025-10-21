@@ -38,13 +38,13 @@ Module.register('MMM-EUElectricityPrice', {
 
     // ── Grid price rules (local time) ─────────────────────────────────────
     gridPriceRules: [
-      { from: '06:00', to: '22:00', add: 0 }, // { from: 'HH:MM', to: 'HH:MM', add: øre/cent per kWh }
+      { from: '06:00', to: '22:00', add: 0 }, // { from: 'HH:MM', to: 'HH:MM', add: øre/cent per kWh } VAT included
       { from: '22:00', to: '06:00', add: 0 },  
     ],
 
     // ── Strømstøtte (support) overlay ────────────────────────────────────
     showSupportLine: false,          // Toggle second line on chart
-    supportThreshold: 0.75,          // Threshold (main currency/kWh), e.g., 0.70 NOK/kWh
+    supportThreshold: 0.9375,          // Threshold (main currency/kWh), e.g., 0.9375 NOK/kWh (VAT included)
     supportPercent: 0.90,            // Compensation fraction (e.g., 0.90 = 90%)
     supportColor: '#FFD700',         // Line color
     supportLineWidth: 2,             // Line width
