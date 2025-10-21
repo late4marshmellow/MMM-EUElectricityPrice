@@ -64,15 +64,18 @@ function computeGridPriceAdderSubunit(utcIso, rules, hourOffset) {
 
   let fallback = 0;
   for (const r of arr) {
-    if (!r || typeof r.add !== 'number') continue;
-    if (!r.from && !r.to) { fallback = r.add; continue; }
+    if (!r) continue;
+    const add = Number(r.add);
+    // accept numeric strings and numbers; skip if not a finite number
+    if (!Number.isFinite(add)) continue;
+    if (!r.from && !r.to) { fallback = add; continue; }
     const start = hhmmToMinutes(r.from || '00:00');
     const end = hhmmToMinutes(r.to || '00:00');
-    if (start === end) { fallback = r.add; continue; }
+    if (start === end) { fallback = add; continue; }
     if (start < end) {
-      if (nowMin >= start && nowMin < end) return r.add;
+      if (nowMin >= start && nowMin < end) return add;
     } else {
-      if (nowMin >= start || nowMin < end) return r.add;
+      if (nowMin >= start || nowMin < end) return add;
     }
   }
   return fallback;
