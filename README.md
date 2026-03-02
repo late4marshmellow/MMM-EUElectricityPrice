@@ -362,7 +362,7 @@ The module has the following configuration options:
 <tr>
   <td><code>yDecimals</code></td>
   <td><code>2</code></td>
-  <td>Decimals on the Y-axis.</td>
+  <td>Display decimals (0–6) for Y-axis and info text. Default <code>2</code></td>
 </tr>
 
 <!-- Line-only sizing -->

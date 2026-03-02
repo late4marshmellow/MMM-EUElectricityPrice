@@ -117,6 +117,7 @@ Module.register('MMM-EUElectricityPrice', {
     tomorrowDataTimeMinute: 1,       // Minute within that hour
     errorMessage: 'Data could not be fetched.',
     loadingMessage: 'Loading data...',
+    customFont: '@import url(\'https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap\'); font-family: \'Roboto\', sans-serif;', //e.g.  "@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300&display=swap'); font-family: 'Rubik', sans-serif;"
   },
   getScripts: function () {
     return [this.file('chart-loader.js')];
@@ -275,6 +276,12 @@ Module.register('MMM-EUElectricityPrice', {
     setTimeout(() => this.schedulePriceUpdate(), 30 * 60 * 1000);
   },
 
+  getDecimalPlaces: function () {
+    const n = Number(this.config.yDecimals);
+    if (!Number.isFinite(n)) return 2;
+    return Math.max(0, Math.min(6, Math.trunc(n)));
+  },
+
   getDom: function () {
     const wrapper = document.createElement('div');
     if (this.config.width) {
@@ -296,9 +303,9 @@ Module.register('MMM-EUElectricityPrice', {
     }
 
     // Display grid energy from helper
-    const d2 = Math.max(0, Math.min(2, this.config.yDecimals));
+    const d2 = this.getDecimalPlaces();
     const gridEnergy = this.config.displayInSubunit
-      ? (Math.round(this.gridAddSubunit)).toString()
+      ? Number(this.gridAddSubunit).toFixed(d2)
       : (this.gridAddSubunit / 100).toFixed(d2);
 
 
@@ -552,7 +559,7 @@ Module.register('MMM-EUElectricityPrice', {
               ticks: {
                 color: this.config.labelColor,
                 callback: function (value) {
-                  const d = Math.max(0, Math.min(2, self.config.yDecimals));
+                  const d = self.getDecimalPlaces();
                   return Number(value).toFixed(d);
                 },
               },
@@ -726,7 +733,7 @@ Module.register('MMM-EUElectricityPrice', {
       </span>` : '';
 
     infoDiv.innerHTML = `
-      <div style="@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap'); font-family: 'Roboto', sans-serif;">
+      <div style="${this.config.customFont}">
         ${headerHtml}
         ${customHtml}
         ${nowHtml}
