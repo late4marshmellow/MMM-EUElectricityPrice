@@ -117,6 +117,7 @@ Module.register('MMM-EUElectricityPrice', {
     tomorrowDataTimeMinute: 1,       // Minute within that hour
     errorMessage: 'Data could not be fetched.',
     loadingMessage: 'Loading data...',
+    customFont: '@import url(\'https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap\'); font-family: \'Roboto\', sans-serif;', //e.g.  "@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300&display=swap'); font-family: 'Rubik', sans-serif;"
   },
   getScripts: function () {
     return [this.file('chart-loader.js')];
@@ -726,7 +727,7 @@ Module.register('MMM-EUElectricityPrice', {
       </span>` : '';
 
     infoDiv.innerHTML = `
-      <div style="@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap'); font-family: 'Roboto', sans-serif;">
+      <div style="${this.config.customFont}">
         ${headerHtml}
         ${customHtml}
         ${nowHtml}
