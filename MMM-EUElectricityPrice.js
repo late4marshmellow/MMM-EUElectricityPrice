@@ -10,7 +10,7 @@
 /* global Chart */
 
 Module.register('MMM-EUElectricityPrice', {
-  validDataSources: ['EE', 'LT', 'LV', 'AT', 'BE', 'FR', 'DE', 'NL', 'PL', 'DK1', 'DK2', 'FI', 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4', 'RO', 'BG', 'SYS'],
+  validDataSources: ['EE', 'LT', 'LV', 'AT', 'BE', 'FR', 'DE', 'GER', 'NL', 'PL', 'DK1', 'DK2', 'FI', 'NO1', 'NO2', 'NO3', 'NO4', 'NO5', 'SE1', 'SE2', 'SE3', 'SE4', 'RO', 'BG', 'SYS'],
   validCurrencies: ['NOK', 'SEK', 'DKK', 'PLN', 'EUR', 'BGN', 'RON'],
   defaults: {
     // ── Data source & units ───────────────────────────────────────────────
